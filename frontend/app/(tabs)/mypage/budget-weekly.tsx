@@ -1,9 +1,9 @@
 import { Text, View, StyleSheet } from 'react-native';
 
-export default function HomeScreen() {
+export default function BudgetWeeklyScreen() {
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>홈</Text>
+      <Text style={styles.title}>주간 예산 설정</Text>
     </View>
   );
 }

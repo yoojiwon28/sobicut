@@ -1,9 +1,9 @@
 import { Text, View, StyleSheet } from 'react-native';
 
-export default function HomeScreen() {
+export default function EditNicknameScreen() {
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>홈</Text>
+      <Text style={styles.title}>닉네임 변경</Text>
     </View>
   );
 }

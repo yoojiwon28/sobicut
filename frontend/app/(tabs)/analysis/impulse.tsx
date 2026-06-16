@@ -1,9 +1,9 @@
 import { Text, View, StyleSheet } from 'react-native';
 
-export default function HomeScreen() {
+export default function ImpulseScreen() {
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>홈</Text>
+      <Text style={styles.title}>충동 소비 분석</Text>
     </View>
   );
 }
