@@ -1,10 +1,10 @@
 import { Outlet } from 'react-router-dom';
-import './AuthLayout.css';
+import { AuthWrapper } from '../styles/auth.styles';
 
 export default function AuthLayout() {
   return (
-    <div className="auth-layout">
+    <AuthWrapper>
       <Outlet />
-    </div>
+    </AuthWrapper>
   );
 }
