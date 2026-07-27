@@ -1,3 +1,4 @@
-# Expo HAS CHANGED
+# Agents
 
-Read the exact versioned docs at https://docs.expo.dev/versions/v54.0.0/ before writing any code.
+This project is a Vite + React + TypeScript PWA (react-router-dom for routing, vite-plugin-pwa for the service worker/manifest).
+See CLAUDE.md and README.md for setup instructions.
