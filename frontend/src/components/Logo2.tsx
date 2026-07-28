@@ -1,5 +1,5 @@
 import styled from 'styled-components';
-import logo2 from '../../assets/images/logo2.svg';
+import logo2 from '../assets/images/logo2.svg';
 
 const StyledImg = styled.img<{ $width: number }>`
   width: ${({ $width }) => $width}px;

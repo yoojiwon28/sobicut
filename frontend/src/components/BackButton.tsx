@@ -2,7 +2,7 @@
 
 import { Link } from 'react-router-dom';
 import styled from 'styled-components';
-import angleLeftIcon from '../../assets/images/angle_left.svg';
+import angleLeftIcon from '../assets/images/angle_left.svg';
 
 const StyledLink = styled(Link)`
   display: inline-flex;

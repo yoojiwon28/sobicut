@@ -3,14 +3,14 @@ import ReactCalendar from 'react-calendar';
 import 'react-calendar/dist/Calendar.css';
 import styled from 'styled-components';
 import Logo2 from '../components/Logo2';
-import foodIcon from '../../assets/images/category/food.svg';
-import fixedExpenseIcon from '../../assets/images/category/fixed-expense.svg';
-import transportIcon from '../../assets/images/category/transport.svg';
-import dailyLifeIcon from '../../assets/images/category/daily-life.svg';
-import shoppingIcon from '../../assets/images/category/shopping.svg';
-import selfDevelopmentIcon from '../../assets/images/category/self-development.svg';
-import cultureLeisureIcon from '../../assets/images/category/culture-leisure.svg';
-import meetingEtcIcon from '../../assets/images/category/meeting-etc.svg';
+import foodIcon from '../assets/images/category/food.svg';
+import fixedExpenseIcon from '../assets/images/category/fixed-expense.svg';
+import transportIcon from '../assets/images/category/transport.svg';
+import dailyLifeIcon from '../assets/images/category/daily-life.svg';
+import shoppingIcon from '../assets/images/category/shopping.svg';
+import selfDevelopmentIcon from '../assets/images/category/self-development.svg';
+import cultureLeisureIcon from '../assets/images/category/culture-leisure.svg';
+import meetingEtcIcon from '../assets/images/category/meeting-etc.svg';
 
 // ---- 타입 (백엔드 응답 형태) ----
 

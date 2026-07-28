@@ -2,9 +2,9 @@ import { useState, type FormEvent, type ChangeEvent } from 'react';
 import styled from 'styled-components';
 import BackButton from '../../components/BackButton';
 import Logo from '../../components/Logo';
-import eyeIcon from '../../../assets/images/eye_icon.svg';
-import closedEyeIcon from '../../../assets/images/closed_eye_icon.svg';
-import checkIcon from '../../../assets/images/check_icon.svg';
+import eyeIcon from '../../assets/images/eye_icon.svg';
+import closedEyeIcon from '../../assets/images/closed_eye_icon.svg';
+import checkIcon from '../../assets/images/check_icon.svg';
 import {
   AuthTitle,
   Field,

@@ -1,12 +1,12 @@
 import { NavLink, Outlet } from 'react-router-dom';
-import homeIcon from '../../assets/images/home_icon.svg';
-import homeColor from '../../assets/images/home_color.svg';
-import calendarIcon from '../../assets/images/calendar_icon.svg';
-import calendarColor from '../../assets/images/calendar_color.svg';
-import chartIcon from '../../assets/images/chart_icon.svg';
-import chartColor from '../../assets/images/chart_color.svg';
-import mypageIcon from '../../assets/images/mypage_icon.svg';
-import mypageColor from '../../assets/images/mypage_color.svg';
+import homeIcon from '../assets/images/home_icon.svg';
+import homeColor from '../assets/images/home_color.svg';
+import calendarIcon from '../assets/images/calendar_icon.svg';
+import calendarColor from '../assets/images/calendar_color.svg';
+import chartIcon from '../assets/images/chart_icon.svg';
+import chartColor from '../assets/images/chart_color.svg';
+import mypageIcon from '../assets/images/mypage_icon.svg';
+import mypageColor from '../assets/images/mypage_color.svg';
 import './TabsLayout.css';
 
 const TABS = [
