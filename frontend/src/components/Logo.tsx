@@ -1,4 +1,4 @@
-import logo from '../../assets/images/logo.svg';
+import logo from '../assets/images/logo.svg';
 import './Logo.css';
 
 export default function Logo({ size = 96 }: { size?: number }) {

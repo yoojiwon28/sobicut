@@ -2,8 +2,8 @@ import { useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import BackButton from '../../components/BackButton';
 import Logo from '../../components/Logo';
-import eyeIcon from '../../../assets/images/eye_icon.svg';
-import closedEyeIcon from '../../../assets/images/closed_eye_icon.svg';
+import eyeIcon from '../../assets/images/eye_icon.svg';
+import closedEyeIcon from '../../assets/images/closed_eye_icon.svg';
 import { AuthTitle, Field, Label, Input, InputIconWrap, ButtonPrimary, Links } from '../../styles/auth.styles';
 
 export default function Login() {

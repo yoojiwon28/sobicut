@@ -2,16 +2,16 @@ import { useState } from 'react';
 import styled from 'styled-components';
 import ArrowRow from '../../components/ArrowRow';
 import { PageWrap } from '../../styles/auth.styles';
-import stashQuestionIcon from '../../../assets/images/stash_question_icon.svg';
-import walletIcon from '../../../assets/images/wallet_icon.svg';
-import settingIcon from '../../../assets/images/setting_icon.svg';
-import cuttyLv0 from '../../../assets/images/character/cutty_lv0_slime.svg';
-import cuttyLv1 from '../../../assets/images/character/cutty_lv1_seed.svg';
-import cuttyLv2 from '../../../assets/images/character/cutty_lv2_box.svg';
-import cuttyLv3 from '../../../assets/images/character/cutty_lv3_shield.svg';
-import cuttyLv4 from '../../../assets/images/character/cutty_lv4_wizard.svg';
-import cuttyLv5 from '../../../assets/images/character/cutty_lv5_knight.svg';
-import cuttyLv6 from '../../../assets/images/character/cutty_lv6_god.svg';
+import stashQuestionIcon from '../../assets/images/stash_question_icon.svg';
+import walletIcon from '../../assets/images/wallet_icon.svg';
+import settingIcon from '../../assets/images/setting_icon.svg';
+import cuttyLv0 from '../../assets/images/character/cutty_lv0_slime.svg';
+import cuttyLv1 from '../../assets/images/character/cutty_lv1_seed.svg';
+import cuttyLv2 from '../../assets/images/character/cutty_lv2_box.svg';
+import cuttyLv3 from '../../assets/images/character/cutty_lv3_shield.svg';
+import cuttyLv4 from '../../assets/images/character/cutty_lv4_wizard.svg';
+import cuttyLv5 from '../../assets/images/character/cutty_lv5_knight.svg';
+import cuttyLv6 from '../../assets/images/character/cutty_lv6_god.svg';
 
 const CHARACTER_IMAGES: Record<number, string> = {
   0: cuttyLv0,

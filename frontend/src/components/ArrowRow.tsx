@@ -2,7 +2,7 @@
 
 import { Link } from 'react-router-dom';
 import styled, { css } from 'styled-components';
-import angleRightIcon from '../../assets/images/angle_right.svg';
+import angleRightIcon from '../assets/images/angle_right.svg';
 
 type ArrowRowProps = {
   to?: string;
