@@ -260,6 +260,12 @@ const AddButton = styled.button`
   color: #fff;
   font-size: 22px;
   line-height: 1;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  -webkit-appearance: none;
+  appearance: none;
   cursor: pointer;
 `;
 
@@ -283,6 +289,7 @@ const StyledCalendar = styled(ReactCalendar)`
     font-size: 16px;
     font-weight: 700;
     cursor: pointer;
+    color: #000;
   }
 
   .react-calendar__navigation button:enabled:hover,
@@ -318,6 +325,7 @@ const StyledCalendar = styled(ReactCalendar)`
     border-radius: 10px;
     margin: 2px 0;
     border: none;
+    color: #000;
     font-size: 14px;
     display: flex;
     flex-direction: column;
