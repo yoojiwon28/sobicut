@@ -31,14 +31,13 @@ export default function TabsLayout() {
             className={({ isActive }) => `tabs-layout__tab${isActive ? ' is-active' : ''}`}
           >
             {({ isActive }) => (
-              <>
+              
                 <img
                   src={isActive ? tab.activeIcon : tab.icon}
                   alt=""
                   className="tabs-layout__tab-icon"
                 />
-                <span>{tab.label}</span>
-              </>
+                
             )}
           </NavLink>
         ))}
