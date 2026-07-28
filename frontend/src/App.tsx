@@ -17,6 +17,9 @@ import EditResidence from './pages/mypage/EditResidence';
 import EditPassword from './pages/mypage/EditPassword';
 import Settings from './pages/mypage/Settings';
 import DataReset from './pages/mypage/DataReset';
+import TodayExpenses from './pages/TodayExpenses';
+import AddExpense from './pages/AddExpense';
+import AddIncome from './pages/AddIncome';
 
 // TODO: replace with real auth state
 const isLoggedIn = true;
@@ -33,6 +36,9 @@ export default function App() {
 
       <Route element={<TabsLayout />}>
         <Route path="/" element={<Home />} />
+        <Route path="/expenses/today" element={<TodayExpenses />} />
+        <Route path="/expenses/add" element={<AddExpense />} />
+        <Route path="/income/add" element={<AddIncome />} />
         <Route path="/calendar" element={<Calendar />} />
         <Route path="/analysis" element={<Analysis />} />
         <Route path="/mypage" element={<MyPage />} />
