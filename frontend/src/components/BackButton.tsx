@@ -1,3 +1,5 @@
+//뒤로가기 버튼
+
 import { Link } from 'react-router-dom';
 import styled from 'styled-components';
 import angleLeftIcon from '../../assets/images/angle_left.svg';

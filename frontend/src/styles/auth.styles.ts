@@ -12,7 +12,7 @@ export const AuthWrapper = styled.div`
 export const AuthTitle = styled.h1<{ $align?: 'center' | 'left'; $size?: number }>`
   text-align: ${({ $align }) => $align ?? 'center'};
   font-size: ${({ $size }) => $size ?? 26}px;
-  font-weight: 800;
+  font-weight: 700;
   margin: 8px 0 32px;
 `;
 
@@ -145,4 +145,16 @@ export const InputIconWrap = styled.div`
     cursor: pointer;
     font-size: 16px;
   }
+`;
+
+export const PageWrap = styled.div`
+  padding: 20px;
+`;
+
+export const FormColumn = styled.div`
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  flex: 1;
+  padding: 20px;
 `;
