@@ -17,3 +17,5 @@ export const CATEGORY_ICONS: Record<string, string> = {
   '문화/여가': cultureLeisureIcon,
   '모임/기타': meetingEtcIcon,
 };
+
+export const CATEGORY_OPTIONS = Object.keys(CATEGORY_ICONS);
