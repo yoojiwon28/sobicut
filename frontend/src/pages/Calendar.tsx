@@ -1,126 +1,13 @@
 import { useMemo, useState } from 'react';
-import ReactCalendar from 'react-calendar';
-import 'react-calendar/dist/Calendar.css';
+import { useNavigate } from 'react-router-dom';
+import { StyledCalendar } from '../styles/calendar.styles';
 import styled from 'styled-components';
 import Logo2 from '../components/Logo2';
-import foodIcon from '../assets/images/category/food.svg';
-import fixedExpenseIcon from '../assets/images/category/fixed-expense.svg';
-import transportIcon from '../assets/images/category/transport.svg';
-import dailyLifeIcon from '../assets/images/category/daily-life.svg';
-import shoppingIcon from '../assets/images/category/shopping.svg';
-import selfDevelopmentIcon from '../assets/images/category/self-development.svg';
-import cultureLeisureIcon from '../assets/images/category/culture-leisure.svg';
-import meetingEtcIcon from '../assets/images/category/meeting-etc.svg';
-
-// ---- 타입 (백엔드 응답 형태) ----
-
-type EmotionTag = {
-  id: number;
-  name: string;
-};
-
-type TransactionType = 'expense' | 'income';
-
-type Transaction = {
-  id: number;
-  amount: number;
-  type: TransactionType;
-  category: string;
-  merchant: string;
-  description: string;
-  transaction_date: string; // 'YYYY-MM-DD'
-  transaction_time: string; // 'HH:mm'
-  emotion_tags: EmotionTag[];
-  created_at: string;
-};
-
-// 카테고리별 아이콘 매핑
-const CATEGORY_ICONS: Record<string, string> = {
-  '식비': foodIcon,
-  '고정지출': fixedExpenseIcon,
-  '교통': transportIcon,
-  '생활': dailyLifeIcon,
-  '쇼핑/패션': shoppingIcon,
-  '자기계발': selfDevelopmentIcon,
-  '문화/여가': cultureLeisureIcon,
-  '모임/기타': meetingEtcIcon,
-};
-
-// 더미 데이터 
-const DUMMY_TRANSACTIONS: Transaction[] = [
-  {
-    id: 1,
-    amount: 10000,
-    type: 'expense',
-    category: '식비',
-    merchant: '스타벅스',
-    description: '커피',
-    transaction_date: '2026-04-19',
-    transaction_time: '14:30',
-    emotion_tags: [{ id: 1, name: '스트레스' }],
-    created_at: '2026-04-19T14:30:00',
-  },
-  {
-    id: 2,
-    amount: 50000,
-    type: 'income',
-    category: '모임/기타',
-    merchant: '부모님',
-    description: '용돈',
-    transaction_date: '2026-04-19',
-    transaction_time: '09:00',
-    emotion_tags: [],
-    created_at: '2026-04-19T09:00:00',
-  },
-  {
-    id: 3,
-    amount: 58000,
-    type: 'expense',
-    category: '쇼핑/패션',
-    merchant: '올리브영',
-    description: '화장품',
-    transaction_date: '2026-04-03',
-    transaction_time: '15:30',
-    emotion_tags: [],
-    created_at: '2026-04-03T15:30:00',
-  },
-  {
-    id: 4,
-    amount: 10000,
-    type: 'expense',
-    category: '식비',
-    merchant: '신룽푸마라탕 숙대입구점',
-    description: '점심',
-    transaction_date: '2026-04-04',
-    transaction_time: '12:15',
-    emotion_tags: [],
-    created_at: '2026-04-04T12:15:00',
-  },
-  {
-    id: 5,
-    amount: 3000,
-    type: 'expense',
-    category: '식비',
-    merchant: '메가커피 숙명여대점',
-    description: '커피',
-    transaction_date: '2026-04-04',
-    transaction_time: '14:02',
-    emotion_tags: [],
-    created_at: '2026-04-04T14:02:00',
-  },
-  {
-    id: 6,
-    amount: 4000,
-    type: 'expense',
-    category: '식비',
-    merchant: '더베이크 숙명여대점',
-    description: '빵',
-    transaction_date: '2026-04-04',
-    transaction_time: '18:40',
-    emotion_tags: [],
-    created_at: '2026-04-04T18:40:00',
-  },
-];
+import type { Transaction } from '../types/transaction';
+import { CATEGORY_ICONS } from '../utils/category';
+import { DUMMY_CALENDAR_TRANSACTIONS } from '../mocks/transactions';
+import incomeIcon from '../assets/images/income_icon.svg';
+import expenseIcon from '../assets/images/expense_icon.svg';
 
 type DayGroup = {
   expenseTotal: number;
@@ -135,13 +22,15 @@ const isSameDay = (a: Date, b: Date) =>
   a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
 
 export default function CalendarPage() {
+  const navigate = useNavigate();
   const [selectedDate, setSelectedDate] = useState(new Date());
+  const [showAddModal, setShowAddModal] = useState(false);
   const today = new Date();
 
-  // 날짜별로 묶어서 지출/수입 합계 계산 
+  // 날짜별로 묶어서 지출/수입 합계 계산
   const groupedByDate = useMemo(() => {
     const map: Record<string, DayGroup> = {};
-    for (const tx of DUMMY_TRANSACTIONS) {
+    for (const tx of DUMMY_CALENDAR_TRANSACTIONS) {
       const key = tx.transaction_date;
       if (!map[key]) {
         map[key] = { expenseTotal: 0, incomeTotal: 0, items: [] };
@@ -163,7 +52,7 @@ export default function CalendarPage() {
     <Page>
       <Header>
         <Logo2 width={120} />
-        <AddButton type="button" onClick={() => {/* TODO: 지출 추가 화면 이동 */}}>
+        <AddButton type="button" onClick={() => setShowAddModal(true)}>
           +
         </AddButton>
       </Header>
@@ -207,7 +96,11 @@ export default function CalendarPage() {
           <span>
             {selectedDate.getMonth() + 1}/{selectedDate.getDate()} 지출 - {(selectedGroup?.expenseTotal ?? 0).toLocaleString()}원
           </span>
-          <MoreLink type="button">+ 더보기</MoreLink>
+          {selectedGroup && (
+            <MoreLink type="button" onClick={() => navigate(`/day/${selectedKey}`)}>
+              + 더보기
+            </MoreLink>
+          )}
         </ExpensePanelHeader>
 
         {selectedGroup ? (
@@ -234,6 +127,22 @@ export default function CalendarPage() {
           <EmptyText>이 날짜에는 지출 내역이 없어요.</EmptyText>
         )}
       </ExpensePanel>
+
+      {showAddModal && (
+        <ModalOverlay onClick={() => setShowAddModal(false)}>
+          <ModalCard onClick={(e) => e.stopPropagation()}>
+            <ModalTitle>내역 추가</ModalTitle>
+            <ModalButton type="button" onClick={() => navigate('/income/add')}>
+              <img src={incomeIcon} alt="" width={22} height={22} />
+              수입 추가
+            </ModalButton>
+            <ModalButton type="button" onClick={() => navigate('/expenses/add')}>
+              <img src={expenseIcon} alt="" width={22} height={22} />
+              지출 추가
+            </ModalButton>
+          </ModalCard>
+        </ModalOverlay>
+      )}
     </Page>
   );
 }
@@ -269,136 +178,23 @@ const AddButton = styled.button`
   cursor: pointer;
 `;
 
-const StyledCalendar = styled(ReactCalendar)`
-  width: 100%;
-  border: none;
-  background: transparent;
-  font-family: inherit;
-
-  .react-calendar__navigation {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 24px;
-    margin-bottom: 12px;
-  }
-
-  .react-calendar__navigation button {
-    background: none;
-    border: none;
-    font-size: 16px;
-    font-weight: 700;
-    cursor: pointer;
-    color: #000;
-  }
-
-  .react-calendar__navigation button:enabled:hover,
-  .react-calendar__navigation button:enabled:focus {
-    background-color: transparent;
-  }
-
-  .react-calendar__navigation button:disabled {
-    background-color: transparent;
-    cursor: default;
-  }
-
-  .react-calendar__navigation__label {
-    font-size: 16px;
-    font-weight: 700;
-  }
-
-  .react-calendar__month-view__weekdays {
-    text-align: center;
-    font-size: 13px;
-    color: #888;
-    margin-bottom: 8px;
-  }
-
-  .react-calendar__month-view__weekdays abbr {
-    text-decoration: none;
-  }
-
-  .react-calendar__tile {
-    position: relative;
-    height: 56px;
-    background: transparent;
-    border-radius: 10px;
-    margin: 2px 0;
-    border: none;
-    color: #000;
-    font-size: 14px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 2px;
-  }
-
-  .react-calendar__tile:enabled:hover,
-  .react-calendar__tile:enabled:focus {
-    background: transparent;
-  }
-
-  .react-calendar__tile--now {
-    background: transparent;
-  }
-
-  .react-calendar__tile--now:enabled:hover,
-  .react-calendar__tile--now:enabled:focus {
-    background: transparent;
-  }
-
-  .react-calendar__tile--active {
-    background: transparent;
-  }
-
-  .react-calendar__tile--active:enabled:hover,
-  .react-calendar__tile--active:enabled:focus {
-    background: transparent;
-  }
-
-  .react-calendar__tile abbr {
-    font-size: 14px;
-  }
-
-  .react-calendar__tile.is-today abbr {
-    color: #6a5ce6;
-    font-weight: 800;
-  }
-
-  .react-calendar__tile.is-selected {
-    background: #6a5ce6;
-  }
-
-  .react-calendar__tile.is-selected:enabled:hover,
-  .react-calendar__tile.is-selected:enabled:focus {
-    background: #6a5ce6;
-  }
-
-  .react-calendar__tile.is-selected abbr {
-    color: #fff;
-    font-weight: 800;
-  }
-
-  .react-calendar__month-view__days__day--neighboringMonth {
-    visibility: hidden;
-  }
-`;
 
 const DayAmounts = styled.div`
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 1px;
+  gap: 0;
 `;
 
 const ExpenseAmount = styled.span<{ $selected?: boolean }>`
   font-size: 9px;
-  color: ${({ $selected }) => ($selected ? '#fff' : '#ff4040')};
+  line-height: 1.2;
+  color: ${({ $selected }) => ($selected ? '#fff' : '#ff7d7d')};
 `;
 
 const IncomeAmount = styled.span<{ $selected?: boolean }>`
   font-size: 9px;
+  line-height: 1.2;
   color: ${({ $selected }) => ($selected ? '#fff' : '#6a5ce6')};
 `;
 
@@ -417,10 +213,14 @@ const ExpensePanelHeader = styled.div`
 `;
 
 const MoreLink = styled.button`
-  background: none;
-  border: none;
+  display: inline-block;
+  background: #f4f2fc;
   color: #6a5ce6;
-  font-size: 13px;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: none;
   cursor: pointer;
 `;
 
@@ -468,4 +268,50 @@ const EmptyText = styled.div`
   color: #999;
   text-align: center;
   padding: 24px 0;
+`;
+
+const ModalOverlay = styled.div`
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+`;
+
+const ModalCard = styled.div`
+  background: #fff;
+  border-radius: 20px;
+  padding: 24px 20px;
+  width: 100%;
+  max-width: 340px;
+  margin: 0 20px;
+`;
+
+const ModalTitle = styled.h2`
+  text-align: center;
+  font-size: 18px;
+  font-weight: 700;
+  margin: 0 0 20px;
+`;
+
+const ModalButton = styled.button`
+  width: 100%;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 16px;
+  border: 1.5px solid #6a5ce6;
+  border-radius: 12px;
+  background: #fff;
+  color: #6a5ce6;
+  font-size: 17px;
+  font-weight: 700;
+  cursor: pointer;
+
+  & + & {
+    margin-top: 12px;
+  }
 `;

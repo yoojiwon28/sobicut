@@ -20,6 +20,7 @@ import DataReset from './pages/mypage/DataReset';
 import TodayExpenses from './pages/TodayExpenses';
 import AddExpense from './pages/AddExpense';
 import AddIncome from './pages/AddIncome';
+import DayTransactions from './pages/DayTransactions';
 
 // TODO: replace with real auth state
 const isLoggedIn = true;
@@ -40,6 +41,7 @@ export default function App() {
         <Route path="/expenses/add" element={<AddExpense />} />
         <Route path="/income/add" element={<AddIncome />} />
         <Route path="/calendar" element={<Calendar />} />
+        <Route path="/day/:date" element={<DayTransactions />} />
         <Route path="/analysis" element={<Analysis />} />
         <Route path="/mypage" element={<MyPage />} />
         <Route path="/mypage/settings" element={<Settings />} />
