@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import styled from 'styled-components';
+import styled, { keyframes } from 'styled-components';
 import ArrowRow from '../../components/ArrowRow';
 import { PageWrap } from '../../styles/auth.styles';
 import stashQuestionIcon from '../../assets/images/stash_question_icon.svg';
@@ -45,6 +45,7 @@ export default function MyPage() {
     100,
     Math.round((DUMMY_LEVEL.current_exp / DUMMY_LEVEL.next_level_exp) * 100),
   );
+  const remainingExp = Math.max(0, DUMMY_LEVEL.next_level_exp - DUMMY_LEVEL.current_exp);
 
   return (
     <PageWrap>
@@ -83,6 +84,7 @@ export default function MyPage() {
           <ExpText>
             {DUMMY_LEVEL.current_exp} / {DUMMY_LEVEL.next_level_exp}
           </ExpText>
+          <ExpRemainingText>다음 레벨까지 {remainingExp} EXP</ExpRemainingText>
         </ExpWrap>
 
         <CharacterBox>
@@ -117,15 +119,16 @@ const UserCode = styled.div`
 
 const Divider = styled.hr`
   border: none;
-  border-top: 1px solid #6a5ce6;
-  margin: 16px 0 24px;
+  border-top: 1px solid #EDE9F9;
+  margin: 16px 0 8px;
 `;
 
 const HelpBox = styled.div`
   position: relative;
   margin-left: 4px;
-  margin-bottom: 12px;
+  margin-bottom: 8px;
 `;
+
 
 const HelpIconButton = styled.button`
   width: 30px;
@@ -145,8 +148,9 @@ const HelpBubble = styled.div`
   left: 38px;
   right: 0;
   z-index: 10;
-  background: #f4f2fc;
-  border-radius: 14px;
+  background: #ffffff;
+  border-left: 3px solid #6a5ce6;
+  border-radius: 10px;
   padding: 14px 16px;
   font-size: 13px;
   line-height: 1.6;
@@ -161,7 +165,10 @@ const HelpHighlight = styled.span`
 
 const LevelSection = styled.div`
   text-align: center;
-  margin-bottom: 36px;
+  margin-bottom: 24px;
+  background: #f8f6fe;
+  border-radius: 20px;
+  padding: 24px 16px;
 `;
 
 const LevelHeading = styled.div`
@@ -181,7 +188,7 @@ const ExpBarTrack = styled.div`
   width: 100%;
   height: 8px;
   border-radius: 999px;
-  background: #ececec;
+  background: #ffffff;
   overflow: hidden;
 `;
 
@@ -197,6 +204,13 @@ const ExpText = styled.div`
   color: #888;
 `;
 
+const ExpRemainingText = styled.div`
+  margin-top: 4px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #6a5ce6;
+`;
+
 const CharacterBox = styled.div`
   width: 100%;
   height: 160px;
@@ -206,24 +220,35 @@ const CharacterBox = styled.div`
   margin-bottom: 20px;
 `;
 
+const float = keyframes`
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+`;
+
 const CharacterImg = styled.img`
   max-width: 180px;
   max-height: 100%;
   width: auto;
   height: auto;
   object-fit: contain;
+  animation: ${float} 2.4s ease-in-out infinite;
 `;
 
 const MentBubble = styled.div`
   position: relative;
   display: inline-block;
   max-width: 320px;
-  background: #efeafc;
+  background: #ffffff;
   color: #444;
   font-size: 13px;
   line-height: 1.5;
   padding: 12px 18px;
   border-radius: 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 
   &::before {
     content: '';
@@ -233,11 +258,16 @@ const MentBubble = styled.div`
     transform: translateX(-50%);
     border-left: 6px solid transparent;
     border-right: 6px solid transparent;
-    border-bottom: 6px solid #efeafc;
+    border-bottom: 6px solid #ffffff;
   }
 `;
 
 const MenuList = styled.div`
+  background: #fff;
+  border-radius: 16px;
+  padding: 4px 16px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
+
   > *:not(:last-child) {
     border-bottom: 1px solid #eee;
   }

@@ -51,9 +51,10 @@ export default function App() {
         <Route path="/mypage/edit/income" element={<EditIncome />} />
         <Route path="/mypage/edit/residence" element={<EditResidence />} />
         <Route path="/mypage/edit/password" element={<EditPassword />} />
+        <Route path="/notification" element={<Notification />} />
       </Route>
 
-      <Route path="/notification" element={<Notification />} />
+      
 
       <Route path="*" element={<Navigate to={isLoggedIn ? '/' : '/login'} replace />} />
     </Routes>

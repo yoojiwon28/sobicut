@@ -60,7 +60,7 @@ export default function Settings() {
 
 const Divider = styled.hr`
   border: none;
-  border-top: 1px solid  #6a5ce6;
+  border-top: 1px solid  #EDE9F9;
   margin: 12px 0 12px;
 `;
 
