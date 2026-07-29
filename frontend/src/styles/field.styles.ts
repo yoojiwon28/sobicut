@@ -25,6 +25,25 @@ export const OutlinedInput = styled.input`
   &[type='date']::-webkit-calendar-picker-indicator {
     opacity: 0;
   }
+
+  &[type='time'] {
+    -webkit-appearance: none;
+    appearance: none;
+    color: #000;
+  }
+
+  &[type='time']::-webkit-date-and-time-value {
+    text-align: left;
+    color: #000;
+  }
+
+  &[type='time']::-webkit-datetime-edit,
+  &[type='time']::-webkit-datetime-edit-hour-field,
+  &[type='time']::-webkit-datetime-edit-minute-field,
+  &[type='time']::-webkit-datetime-edit-text,
+  &[type='time']::-webkit-datetime-edit-ampm-field {
+    color: #000;
+  }
 `;
 
 export const OutlinedSelect = styled.select`
@@ -93,12 +112,31 @@ export const AmountLabel = styled.div`
 
 export const AmountRow = styled.div`
   display: flex;
-  align-items: baseline;
-  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+`;
+
+export const StepButton = styled.button`
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+  border: none;
+  border-radius: 50%;
+  background: #e5e1fb;
+  color: #6a5ce6;
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
 `;
 
 export const AmountInput = styled.input`
   flex: 1;
+  min-width: 0;
   border: none;
   background: none;
   outline: none;
@@ -113,10 +151,10 @@ export const AmountInput = styled.input`
 `;
 
 export const AmountUnit = styled.span`
+  flex-shrink: 0;
   font-size: 16px;
   font-weight: 700;
   color: #111;
-  margin-left: 8px;
 `;
 
 export const LinkButton = styled.button`
@@ -129,4 +167,21 @@ export const LinkButton = styled.button`
   text-decoration: underline;
   cursor: pointer;
   padding: 0;
+`;
+
+export const ImportButton = styled.button`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  height: 38px;
+  border: none;
+  border-radius: 10px;
+  background: #efeafc;
+  color: #6a5ce6;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  margin-bottom: 20px;
 `;
