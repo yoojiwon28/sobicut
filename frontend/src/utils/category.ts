@@ -19,3 +19,14 @@ export const CATEGORY_ICONS: Record<string, string> = {
 };
 
 export const CATEGORY_OPTIONS = Object.keys(CATEGORY_ICONS);
+
+export const CATEGORY_COLORS: Record<string, string> = {
+  '식비': '#6A5CE6',
+  '고정지출': '#9589F0',
+  '교통': '#B8D4F8',
+  '생활': '#FFB347',
+  '쇼핑/패션': '#FF7D7D',
+  '자기계발': '#7ED9C3',
+  '문화/여가': '#FFD36A',
+  '모임/기타': '#C9C9C9',
+};
