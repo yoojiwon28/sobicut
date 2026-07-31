@@ -3,7 +3,7 @@ import type { Transaction } from '../types/transaction';
 // TODO: GET /transactions?date=오늘날짜&type=expense 로 교체
 export const DUMMY_TODAY_EXPENSES: Transaction[] = [
   {
-    id: 1,
+    id: 101,
     amount: 10000,
     type: 'expense',
     category: '식비',
@@ -15,7 +15,7 @@ export const DUMMY_TODAY_EXPENSES: Transaction[] = [
     created_at: '2026-04-14T08:30:00',
   },
   {
-    id: 2,
+    id: 102,
     amount: 4500,
     type: 'expense',
     category: '식비',
@@ -27,7 +27,7 @@ export const DUMMY_TODAY_EXPENSES: Transaction[] = [
     created_at: '2026-04-14T09:15:00',
   },
   {
-    id: 3,
+    id: 103,
     amount: 20000,
     type: 'expense',
     category: '교통',
@@ -39,7 +39,7 @@ export const DUMMY_TODAY_EXPENSES: Transaction[] = [
     created_at: '2026-04-14T10:00:00',
   },
   {
-    id: 4,
+    id: 104,
     amount: 15000,
     type: 'expense',
     category: '쇼핑/패션',
@@ -51,7 +51,7 @@ export const DUMMY_TODAY_EXPENSES: Transaction[] = [
     created_at: '2026-04-14T13:20:00',
   },
   {
-    id: 5,
+    id: 105,
     amount: 13000,
     type: 'expense',
     category: '문화/여가',
@@ -63,7 +63,7 @@ export const DUMMY_TODAY_EXPENSES: Transaction[] = [
     created_at: '2026-04-14T15:00:00',
   },
   {
-    id: 6,
+    id: 106,
     amount: 6000,
     type: 'expense',
     category: '생활',
@@ -75,7 +75,7 @@ export const DUMMY_TODAY_EXPENSES: Transaction[] = [
     created_at: '2026-04-14T17:40:00',
   },
   {
-    id: 7,
+    id: 107,
     amount: 8000,
     type: 'expense',
     category: '자기계발',
@@ -331,3 +331,6 @@ export const DUMMY_CALENDAR_TRANSACTIONS: Transaction[] = [
     created_at: '2026-07-29T14:02:00',
   },
 ];
+
+// TODO: GET /transactions/:id 로 교체. 지출/수입 상세 페이지용 조회
+export const DUMMY_ALL_TRANSACTIONS: Transaction[] = [...DUMMY_TODAY_EXPENSES, ...DUMMY_CALENDAR_TRANSACTIONS];
