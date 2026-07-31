@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import styled from 'styled-components';
 import BackButton from '../../components/BackButton';
 import { AuthTitle, PageWrap } from '../../styles/auth.styles';
@@ -10,7 +10,8 @@ import angleRightIcon from '../../assets/images/angle_right.svg';
 
 export default function CategoryList() {
   const navigate = useNavigate();
-  const monthKey = getMonthKey(new Date());
+  const [searchParams] = useSearchParams();
+  const monthKey = searchParams.get('month') ?? getMonthKey(new Date());
 
   const rows = useMemo(() => {
     const monthExpenses = DUMMY_CALENDAR_TRANSACTIONS.filter(
@@ -43,7 +44,7 @@ export default function CategoryList() {
             <Row
               key={category}
               type="button"
-              onClick={() => navigate(`/analysis/categories/${encodeURIComponent(category)}`)}
+              onClick={() => navigate(`/analysis/categories/${encodeURIComponent(category)}?month=${monthKey}`)}
             >
               <Dot style={{ background: CATEGORY_COLORS[category] ?? '#ccc' }} />
               <Info>

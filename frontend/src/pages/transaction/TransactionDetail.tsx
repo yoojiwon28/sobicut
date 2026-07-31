@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
 import styled from 'styled-components';
 import BackButton from '../../components/BackButton';
 import DateTimePickerField from '../../components/DateTimePickerField';
@@ -15,6 +15,7 @@ import angleRightIcon from '../../assets/images/angle_right.svg';
 
 export default function TransactionDetail() {
   const { id } = useParams<{ id: string }>();
+  const [searchParams] = useSearchParams();
   const tx = DUMMY_ALL_TRANSACTIONS.find((t) => String(t.id) === id);
 
   const [merchant, setMerchant] = useState(tx?.merchant ?? '');
@@ -36,7 +37,12 @@ export default function TransactionDetail() {
   }
 
   const isExpense = tx.type === 'expense';
-  const backTo = DUMMY_TODAY_EXPENSES.some((t) => t.id === tx.id) ? '/expenses/today' : `/day/${tx.transaction_date}`;
+  const fromParam = searchParams.get('from');
+  const backTo = fromParam
+    ? fromParam
+    : DUMMY_TODAY_EXPENSES.some((t) => t.id === tx.id)
+      ? '/expenses/today'
+      : `/day/${tx.transaction_date}`;
 
   // TODO: PATCH /transactions/:id 로 교체
   const handleMerchantIconClick = () => {
