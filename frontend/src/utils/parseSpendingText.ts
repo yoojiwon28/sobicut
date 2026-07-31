@@ -3,6 +3,7 @@ export type ParsedSpending = {
   merchant?: string;
   date?: string; // YYYY-MM-DD
   time?: string; // HH:mm
+  card?: string;
 };
 
 // 카드사/은행 문자 형식이 제각각
@@ -21,6 +22,14 @@ export function parseSpendingText(text: string): ParsedSpending {
     const year = new Date().getFullYear();
     result.date = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
     result.time = `${hour.padStart(2, '0')}:${minute}`;
+  }
+
+  const cardLine = text
+    .split(/\n|\r/)
+    .find((line) => line.includes('카드') && !line.includes('*'));
+  if (cardLine) {
+    const cardMatch = cardLine.match(/([가-힣]{2,10}카드)/);
+    if (cardMatch) result.card = cardMatch[1];
   }
 
   const NOISE_WORDS = ['승인', '일시불', '카드', '결제', '누적', '체크', '거절', '취소'];
