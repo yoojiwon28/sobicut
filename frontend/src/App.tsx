@@ -4,6 +4,10 @@ import AuthLayout from './layouts/AuthLayout';
 import Home from './pages/Home';
 import Calendar from './pages/Calendar';
 import Analysis from './pages/Analysis';
+import CategoryList from './pages/analysis/CategoryList';
+import CategoryDetail from './pages/analysis/CategoryDetail';
+import BudgetSetting from './pages/budget/BudgetSetting';
+import BudgetWeekly from './pages/budget/BudgetWeekly';
 import Notification from './pages/Notification';
 import Login from './pages/auth/Login';
 import Register from './pages/auth/Register';
@@ -45,6 +49,10 @@ export default function App() {
         <Route path="/day/:date" element={<DayTransactions />} />
         <Route path="/transactions/:id" element={<TransactionDetail />} />
         <Route path="/analysis" element={<Analysis />} />
+        <Route path="/analysis/categories" element={<CategoryList />} />
+        <Route path="/analysis/categories/:category" element={<CategoryDetail />} />
+        <Route path="/budget" element={<BudgetSetting />} />
+        <Route path="/budget/weekly" element={<BudgetWeekly />} />
         <Route path="/mypage" element={<MyPage />} />
         <Route path="/mypage/settings" element={<Settings />} />
         <Route path="/mypage/settings/reset" element={<DataReset />} />
