@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import styled from 'styled-components';
 import BackButton from '../components/BackButton';
+import SatisfactionSurveyModal from '../components/SatisfactionSurveyModal';
 import { AuthTitle, PageWrap } from '../styles/auth.styles';
 import { DUMMY_NOTIFICATIONS } from '../mocks/notifications';
+import { DUMMY_ALL_TRANSACTIONS } from '../mocks/transactions';
 import type { AppNotification, NotificationType } from '../types/notification';
 import { formatShortDateTime } from '../utils/date';
 import iconBudget from '../assets/images/notification/icon_budget.svg';
@@ -22,6 +24,7 @@ const TYPE_ICONS: Record<NotificationType, string> = {
 
 export default function Notification() {
   const [notifications, setNotifications] = useState<AppNotification[]>(DUMMY_NOTIFICATIONS);
+  const [surveyTransactionId, setSurveyTransactionId] = useState<number | null>(null);
 
   const unreadCount = notifications.filter((n) => !n.is_read).length;
 
@@ -34,6 +37,15 @@ export default function Notification() {
     // TODO: PUT /notifications/read-all
     setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
   };
+
+  const handleItemClick = (n: AppNotification) => {
+    handleMarkRead(n.id);
+    if (n.type === 'satisfaction_request' && n.transaction_id != null) {
+      setSurveyTransactionId(n.transaction_id);
+    }
+  };
+
+  const surveyTransaction = DUMMY_ALL_TRANSACTIONS.find((tx) => tx.id === surveyTransactionId);
 
   return (
     <PageWrap>
@@ -52,7 +64,7 @@ export default function Notification() {
       ) : (
         <List>
           {notifications.map((n) => (
-            <Item key={n.id} type="button" $unread={!n.is_read} onClick={() => handleMarkRead(n.id)}>
+            <Item key={n.id} type="button" $unread={!n.is_read} onClick={() => handleItemClick(n)}>
               <IconWrap>
                 <img src={TYPE_ICONS[n.type]} alt="" width={18} height={18} />
               </IconWrap>
@@ -67,6 +79,13 @@ export default function Notification() {
             </Item>
           ))}
         </List>
+      )}
+
+      {surveyTransaction && (
+        <SatisfactionSurveyModal
+          transactionId={surveyTransaction.id}
+          onClose={() => setSurveyTransactionId(null)}
+        />
       )}
     </PageWrap>
   );

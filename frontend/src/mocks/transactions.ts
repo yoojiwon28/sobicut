@@ -330,6 +330,18 @@ export const DUMMY_CALENDAR_TRANSACTIONS: Transaction[] = [
     emotion_tags: [],
     created_at: '2026-07-29T14:02:00',
   },
+  {
+    id: 21,
+    amount: 18000,
+    type: 'expense',
+    category: '문화/여가',
+    merchant: '교보문고',
+    description: '책',
+    transaction_date: '2026-07-24',
+    transaction_time: '20:15',
+    emotion_tags: [],
+    created_at: '2026-07-24T20:15:00',
+  },
 ];
 
 // TODO: GET /transactions/:id 로 교체. 지출/수입 상세 페이지용 조회

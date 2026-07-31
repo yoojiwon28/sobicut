@@ -13,4 +13,5 @@ export type AppNotification = {
   message: string;
   is_read: boolean;
   created_at: string;
+  transaction_id?: number;
 };
