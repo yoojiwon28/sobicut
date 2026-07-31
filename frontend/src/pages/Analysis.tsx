@@ -280,7 +280,7 @@ export default function Analysis() {
             <CategoryRow
               key={category}
               type="button"
-              onClick={() => navigate(`/analysis/categories/${encodeURIComponent(category)}`)}
+              onClick={() => navigate(`/analysis/categories/${encodeURIComponent(category)}?month=${spendMonthKey}`)}
             >
               <CategoryDot style={{ background: CATEGORY_COLORS[category] ?? '#ccc' }} />
               <CategoryInfo>
@@ -291,7 +291,7 @@ export default function Analysis() {
             </CategoryRow>
           ))}
           {rest.length > 0 && (
-            <CategoryRow type="button" onClick={() => navigate('/analysis/categories')}>
+            <CategoryRow type="button" onClick={() => navigate(`/analysis/categories?month=${spendMonthKey}`)}>
               <CategoryDot style={{ background: '#ececec' }} />
               <CategoryInfo>
                 <CategoryName>그 외 {rest.length}개</CategoryName>

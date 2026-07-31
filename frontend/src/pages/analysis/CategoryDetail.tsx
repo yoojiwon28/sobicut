@@ -1,11 +1,11 @@
 import { useMemo } from 'react';
-import { useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import styled from 'styled-components';
 import BackButton from '../../components/BackButton';
 import ExpenseList from '../../components/ExpenseList';
 import { PageWrap } from '../../styles/auth.styles';
 import { DUMMY_CALENDAR_TRANSACTIONS } from '../../mocks/transactions';
-import { getMonthKey, formatMonthDay } from '../../utils/date';
+import { getMonthKey, formatMonthDay, formatMonthLabel } from '../../utils/date';
 import type { Transaction } from '../../types/transaction';
 
 type DateGroup = {
@@ -14,9 +14,13 @@ type DateGroup = {
 };
 
 export default function CategoryDetail() {
+  const navigate = useNavigate();
   const { category = '' } = useParams<{ category: string }>();
+  const [searchParams] = useSearchParams();
   const decoded = decodeURIComponent(category);
-  const monthKey = getMonthKey(new Date());
+  const currentMonthKey = getMonthKey(new Date());
+  const monthKey = searchParams.get('month') ?? currentMonthKey;
+  const monthLabel = monthKey === currentMonthKey ? '이번 달' : formatMonthLabel(new Date(`${monthKey}-01`));
 
   const groups = useMemo(() => {
     const items = DUMMY_CALENDAR_TRANSACTIONS.filter(
@@ -42,20 +46,27 @@ export default function CategoryDetail() {
 
   return (
     <PageWrap>
-      <BackButton to="/analysis/categories" />
+      <BackButton to={`/analysis/categories?month=${monthKey}`} />
       <Header>
-        <MonthLabel>이번 달</MonthLabel>
+        <MonthLabel>{monthLabel}</MonthLabel>
         <CategoryTitle>{decoded}</CategoryTitle>
         <Total>{total.toLocaleString()}원</Total>
       </Header>
 
       {groups.length === 0 ? (
-        <EmptyText>이번 달 {decoded} 소비 내역이 없어요.</EmptyText>
+        <EmptyText>{monthLabel} {decoded} 소비 내역이 없어요.</EmptyText>
       ) : (
         groups.map((group) => (
           <DateGroupBlock key={group.date}>
             <DateLabel>{formatMonthDay(group.date)}</DateLabel>
-            <ExpenseList items={group.items} />
+            <ExpenseList
+              items={group.items}
+              showArrow
+              onRowClick={(tx) => {
+                const from = encodeURIComponent(`/analysis/categories/${encodeURIComponent(decoded)}?month=${monthKey}`);
+                navigate(`/transactions/${tx.id}?from=${from}`);
+              }}
+            />
           </DateGroupBlock>
         ))
       )}
