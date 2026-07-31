@@ -1,4 +1,4 @@
-import { useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import styled from 'styled-components';
 import BackButton from '../components/BackButton';
 import ExpenseList from '../components/ExpenseList';
@@ -7,6 +7,7 @@ import { DUMMY_CALENDAR_TRANSACTIONS } from '../mocks/transactions';
 import { formatKoreanDate } from '../utils/date';
 
 export default function DayTransactions() {
+  const navigate = useNavigate();
   const { date = '' } = useParams<{ date: string }>();
 
   const items = DUMMY_CALENDAR_TRANSACTIONS.filter((tx) => tx.transaction_date === date);
@@ -59,9 +60,7 @@ export default function DayTransactions() {
         items={items}
         showArrow
         emptyText="이 날짜에는 내역이 없어요."
-        onRowClick={() => {
-          // TODO: 지출/수입 상세 페이지로 이동 (라우트 미정)
-        }}
+        onRowClick={(tx) => navigate(`/transactions/${tx.id}`)}
       />
     </Page>
   );

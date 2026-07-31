@@ -21,6 +21,7 @@ import TodayExpenses from './pages/TodayExpenses';
 import AddExpense from './pages/AddExpense';
 import AddIncome from './pages/AddIncome';
 import DayTransactions from './pages/DayTransactions';
+import TransactionDetail from './pages/transaction/TransactionDetail';
 
 // TODO: replace with real auth state
 const isLoggedIn = true;
@@ -42,6 +43,7 @@ export default function App() {
         <Route path="/income/add" element={<AddIncome />} />
         <Route path="/calendar" element={<Calendar />} />
         <Route path="/day/:date" element={<DayTransactions />} />
+        <Route path="/transactions/:id" element={<TransactionDetail />} />
         <Route path="/analysis" element={<Analysis />} />
         <Route path="/mypage" element={<MyPage />} />
         <Route path="/mypage/settings" element={<Settings />} />
