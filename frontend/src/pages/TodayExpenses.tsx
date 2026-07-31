@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import BackButton from '../components/BackButton';
 import ExpenseList from '../components/ExpenseList';
@@ -6,6 +7,7 @@ import { DUMMY_TODAY_EXPENSES } from '../mocks/transactions';
 import { formatKoreanDate } from '../utils/date';
 
 export default function TodayExpenses() {
+  const navigate = useNavigate();
   const total = DUMMY_TODAY_EXPENSES.reduce((sum, tx) => sum + tx.amount, 0);
 
   const categoryTotals = DUMMY_TODAY_EXPENSES.reduce<Record<string, number>>((acc, tx) => {
@@ -38,13 +40,7 @@ export default function TodayExpenses() {
         </BreakdownList>
       </TotalBox>
 
-      <ExpenseList
-        items={DUMMY_TODAY_EXPENSES}
-        showArrow
-        onRowClick={() => {
-          // TODO: 지출 상세 페이지로 이동 (라우트 미정)
-        }}
-      />
+      <ExpenseList items={DUMMY_TODAY_EXPENSES} showArrow onRowClick={(tx) => navigate(`/transactions/${tx.id}`)} />
     </Page>
   );
 }
