@@ -6,6 +6,8 @@ import Calendar from './pages/Calendar';
 import Analysis from './pages/Analysis';
 import CategoryList from './pages/analysis/CategoryList';
 import CategoryDetail from './pages/analysis/CategoryDetail';
+import SpendingReport from './pages/analysis/SpendingReport';
+import ImpulseReport from './pages/analysis/ImpulseReport';
 import BudgetSetting from './pages/budget/BudgetSetting';
 import BudgetWeekly from './pages/budget/BudgetWeekly';
 import Notification from './pages/Notification';
@@ -51,6 +53,8 @@ export default function App() {
         <Route path="/analysis" element={<Analysis />} />
         <Route path="/analysis/categories" element={<CategoryList />} />
         <Route path="/analysis/categories/:category" element={<CategoryDetail />} />
+        <Route path="/analysis/report" element={<SpendingReport />} />
+        <Route path="/analysis/report/impulse" element={<ImpulseReport />} />
         <Route path="/budget" element={<BudgetSetting />} />
         <Route path="/budget/weekly" element={<BudgetWeekly />} />
         <Route path="/mypage" element={<MyPage />} />
