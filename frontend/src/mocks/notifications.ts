@@ -33,6 +33,7 @@ export const DUMMY_NOTIFICATIONS: AppNotification[] = [
     message: '어제 소비, 만족스러우셨나요?',
     is_read: true,
     created_at: '2026-07-25T09:00:00',
+    transaction_id: 21,
   },
   {
     id: 5,
