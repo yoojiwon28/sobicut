@@ -44,6 +44,25 @@ function sumExpense(items: typeof DUMMY_CALENDAR_TRANSACTIONS) {
   return items.reduce((sum, tx) => sum + tx.amount, 0);
 }
 
+const PROGRESS_INSIDE_THRESHOLD = 10;
+
+function BudgetProgressBar({ percent }: { percent: number }) {
+  const clamped = Math.min(100, Math.max(0, percent));
+  const inside = clamped >= PROGRESS_INSIDE_THRESHOLD;
+
+  return (
+    <ProgressTrack>
+      <ProgressFill style={{ width: `${clamped}%` }} />
+      <ProgressPercent
+        $inside={inside}
+        style={inside ? { left: `calc(${clamped}% - 6px)`, transform: 'translate(-100%, -50%)' } : { left: `calc(${clamped}% + 6px)` }}
+      >
+        {clamped}%
+      </ProgressPercent>
+    </ProgressTrack>
+  );
+}
+
 const TODAY = new Date();
 
 export default function Analysis() {
@@ -204,12 +223,7 @@ export default function Analysis() {
             <BudgetColValue>{DUMMY_BUDGET.thisWeek.toLocaleString()}원</BudgetColValue>
           </BudgetColumn>
         </BudgetRow>
-        <ProgressTrack>
-          <ProgressFill style={{ width: `${weeklyPercent}%` }} />
-          <ProgressPercent style={{ left: `calc(${Math.min(weeklyPercent, 85)}% + 6px)` }}>
-            {weeklyPercent}%
-          </ProgressPercent>
-        </ProgressTrack>
+        <BudgetProgressBar percent={weeklyPercent} />
         <BudgetRemainText>{remainText(weeklyRemain)}</BudgetRemainText>
       </BudgetCard>
 
@@ -236,12 +250,7 @@ export default function Analysis() {
             <BudgetColValue>{DUMMY_BUDGET.total.toLocaleString()}원</BudgetColValue>
           </BudgetColumn>
         </BudgetRow>
-        <ProgressTrack>
-          <ProgressFill style={{ width: `${monthlyPercent}%` }} />
-          <ProgressPercent style={{ left: `calc(${Math.min(monthlyPercent, 85)}% + 6px)` }}>
-            {monthlyPercent}%
-          </ProgressPercent>
-        </ProgressTrack>
+        <BudgetProgressBar percent={monthlyPercent} />
         <BudgetRemainText>{remainText(monthlyRemain)}</BudgetRemainText>
       </BudgetCard>
 
@@ -507,13 +516,13 @@ const ProgressFill = styled.div`
   transition: width 0.2s ease;
 `;
 
-const ProgressPercent = styled.span`
+const ProgressPercent = styled.span<{ $inside: boolean }>`
   position: absolute;
   top: 50%;
   transform: translateY(-50%);
   font-size: 10px;
   font-weight: 700;
-  color: #6a5ce6;
+  color: ${({ $inside }) => ($inside ? '#fff' : '#6a5ce6')};
   white-space: nowrap;
 `;
 
