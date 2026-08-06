@@ -18,6 +18,11 @@ export function formatDetailDateTime(dateStr: string, timeStr: string) {
   return `${dateStr.replaceAll('-', '.')} ${String(hour12).padStart(2, '0')}:${minuteStr} ${period}`;
 }
 
+export function formatSlashDateTime(dateStr: string, timeStr: string) {
+  const [, month, day] = dateStr.split('-');
+  return `${month}/${day} ${timeStr}`;
+}
+
 export function formatMonthDay(dateStr: string) {
   const d = new Date(dateStr);
   return `${d.getMonth() + 1}/${d.getDate()}`;

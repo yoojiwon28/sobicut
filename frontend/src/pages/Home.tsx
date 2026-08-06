@@ -1,9 +1,12 @@
+import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import styled, { keyframes } from 'styled-components';
 import Logo2 from '../components/Logo2';
 import ExpenseList from '../components/ExpenseList';
+import ExpenseCaptureModal from '../components/ExpenseCaptureModal';
 import { ButtonPrimary } from '../styles/auth.styles';
 import { DUMMY_TODAY_EXPENSES } from '../mocks/transactions';
+import { DUMMY_CAPTURED_SMS } from '../mocks/pendingCapture';
 import notificationIcon from '../assets/images/notification_icon.svg';
 import {
   WALLET_IMAGES,
@@ -18,6 +21,9 @@ const DUMMY_USER_NAME = '박영호';
 
 // TODO: 알림 여부 실제 알림 API
 const hasNotification = true;
+
+// TODO: 실제로는 새 결제 문자 감지 시 서버에서 파싱+LLM 분류된 값을 내려받아 모달로 표시
+const hasPendingCapture = true;
 
 // GET /reports/scores 더미데이터
 const DUMMY_SCORES = {
@@ -40,6 +46,7 @@ const DUMMY_SCORES = {
 
 export default function Home() {
   const navigate = useNavigate();
+  const [showCaptureModal, setShowCaptureModal] = useState(hasPendingCapture);
 
   const levelIndex = getWalletLevelIndex(DUMMY_SCORES.wallet_temperature.level);
   const walletImage = WALLET_IMAGES[levelIndex];
@@ -134,6 +141,10 @@ export default function Home() {
       <AddButton type="button" onClick={() => navigate('/expenses/add')}>
         + 지출 추가
       </AddButton>
+
+      {showCaptureModal && (
+        <ExpenseCaptureModal rawText={DUMMY_CAPTURED_SMS} onClose={() => setShowCaptureModal(false)} />
+      )}
     </Page>
   );
 }
