@@ -162,12 +162,7 @@ export default function Analysis() {
     <Page>
       <Title>MY SPENDING</Title>
 
-      <DetailLinkRow
-        type="button"
-        onClick={() => {
-          // TODO: 소비 상세 리포트 페이지 라우트 미정
-        }}
-      >
+      <DetailLinkRow type="button" onClick={() => navigate('/analysis/report')}>
         나의 소비 상세 분석 보러가기
         <img src={angleRightIcon} alt="" width={18} height={18} />
       </DetailLinkRow>
@@ -250,12 +245,7 @@ export default function Analysis() {
         <BudgetRemainText>{remainText(monthlyRemain)}</BudgetRemainText>
       </BudgetCard>
 
-      <DetailLinkCenter
-        type="button"
-        onClick={() => {
-          // TODO: 지갑 및 예상 지출액 상세 페이지 라우트 미정
-        }}
-      >
+      <DetailLinkCenter type="button" onClick={() => navigate('/analysis/report#wallet')}>
         나의 지갑 및 예상 지출액 확인하러 가기
       </DetailLinkCenter>
 
