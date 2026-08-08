@@ -387,6 +387,8 @@ const CategorySelect = styled.select`
   box-sizing: border-box;
   outline: none;
   appearance: none;
+  `;
+  
 const RecordButton = styled.button`
   width: 100%;
   height: 48px;
