@@ -4,7 +4,6 @@ import styled from 'styled-components';
 import Modal from './Modal';
 import DateTimePickerField from './DateTimePickerField';
 import EmotionDonutChart from './EmotionDonutChart';
-import { FieldGroup, FieldLabel, OutlinedInput, OutlinedSelect } from '../styles/field.styles';
 import { CATEGORY_OPTIONS } from '../utils/category';
 import { classifyCategory } from '../utils/classifyCategory';
 import { parseSpendingText } from '../utils/parseSpendingText';
@@ -116,47 +115,52 @@ export default function ExpenseCaptureModal({ rawText, onClose }: ExpenseCapture
     return (
       <Modal>
         <Title>새로운 결제 포착!</Title>
+        <Divider />
 
-        <FieldGroup>
-          <FieldLabel>가맹점</FieldLabel>
-          <OutlinedInput value={merchant} onChange={(e) => setMerchant(e.target.value)} />
-        </FieldGroup>
+        <InlineFieldList>
+          <InlineField>
+            <InlineLabel>가맹점</InlineLabel>
+            <InlineInput value={merchant} onChange={(e) => setMerchant(e.target.value)} />
+          </InlineField>
 
-        <FieldGroup>
-          <FieldLabel>날짜</FieldLabel>
-          <DateTimePickerField
-            date={date}
-            time={time}
-            onChange={(d, t) => {
-              setDate(d);
-              setTime(t);
-            }}
-          />
-        </FieldGroup>
+          <InlineField>
+            <InlineLabel>날짜</InlineLabel>
+            <InlineDateWrap>
+              <DateTimePickerField
+                date={date}
+                time={time}
+                onChange={(d, t) => {
+                  setDate(d);
+                  setTime(t);
+                }}
+              />
+            </InlineDateWrap>
+          </InlineField>
 
-        <FieldGroup>
-          <FieldLabel>금액</FieldLabel>
-          <OutlinedInput
-            type="number"
-            inputMode="numeric"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-          />
-        </FieldGroup>
+          <InlineField>
+            <InlineLabel>금액</InlineLabel>
+            <InlineInput
+              type="number"
+              inputMode="numeric"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+            />
+          </InlineField>
+        </InlineFieldList>
 
-        <FieldGroup>
-          <FieldLabel>카테고리</FieldLabel>
+        <CategoryField>
+          <CategoryLabel>카테고리</CategoryLabel>
           <SelectFieldWrap>
-            <OutlinedSelect value={category} onChange={(e) => setCategory(e.target.value)}>
+            <CategorySelect value={category} onChange={(e) => setCategory(e.target.value)}>
               {CATEGORY_OPTIONS.map((option) => (
                 <option key={option} value={option}>
                   {option}
                 </option>
               ))}
-            </OutlinedSelect>
+            </CategorySelect>
             <ChevronIcon src={angleRightIcon} alt="" width={16} height={16} />
           </SelectFieldWrap>
-        </FieldGroup>
+        </CategoryField>
 
         <ButtonRow>
           <OutlineButton type="button" onClick={() => setStep('confirm')}>
@@ -321,6 +325,70 @@ const SkipButton = styled.button`
   cursor: pointer;
 `;
 
+const InlineFieldList = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 18px;
+`;
+
+const InlineField = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+`;
+
+const InlineLabel = styled.label`
+  flex: 0 0 64px;
+  width: 64px;
+  display: flex;
+  align-items: center;
+  font-size: 14px;
+  font-weight: 500;
+  color: #333;
+`;
+
+const InlineInput = styled.input`
+  flex: 1;
+  min-width: 0;
+  height: 36px;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 0 10px;
+  font-size: 14px;
+  box-sizing: border-box;
+  outline: none;
+`;
+
+const InlineDateWrap = styled.div`
+  flex: 1;
+  min-width: 0;
+`;
+
+const CategoryField = styled.div`
+  margin-bottom: 18px;
+`;
+
+const CategoryLabel = styled.label`
+  display: block;
+  font-size: 14px;
+  font-weight: 700;
+  margin-bottom: 8px;
+`;
+
+const CategorySelect = styled.select`
+  width: 100%;
+  height: 36px;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  background: #fff;
+  padding: 0 10px;
+  font-size: 14px;
+  box-sizing: border-box;
+  outline: none;
+  appearance: none;
+  `;
+  
 const RecordButton = styled.button`
   width: 100%;
   height: 48px;
