@@ -1,17 +1,20 @@
 import { useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import Modal from './Modal';
 import DateTimePickerField from './DateTimePickerField';
+import EmotionDonutChart from './EmotionDonutChart';
 import { FieldGroup, FieldLabel, OutlinedInput, OutlinedSelect } from '../styles/field.styles';
 import { CATEGORY_OPTIONS } from '../utils/category';
 import { classifyCategory } from '../utils/classifyCategory';
 import { parseSpendingText } from '../utils/parseSpendingText';
 import { formatSlashDateTime } from '../utils/date';
-import { EMOTION_ROWS, POSITIVE_EMOTIONS } from '../utils/emotion';
+import { EMOTION_ROWS, EMOTION_MESSAGES, POSITIVE_EMOTIONS, buildEmotionSegments } from '../utils/emotion';
+import { DUMMY_EMOTION_BASE_STATS } from '../mocks/emotion';
 import type { EmotionKey } from '../types/emotion';
 import angleRightIcon from '../assets/images/angle_right.svg';
 
-type Step = 'confirm' | 'edit' | 'emotion';
+type Step = 'confirm' | 'edit' | 'emotion' | 'result';
 
 type ExpenseCaptureModalProps = {
   rawText: string;
@@ -19,6 +22,7 @@ type ExpenseCaptureModalProps = {
 };
 
 export default function ExpenseCaptureModal({ rawText, onClose }: ExpenseCaptureModalProps) {
+  const navigate = useNavigate();
   const parsed = useMemo(() => parseSpendingText(rawText), [rawText]);
   const suggestedCategory = useMemo(
     () => (parsed.merchant ? classifyCategory(parsed.merchant) : CATEGORY_OPTIONS[0]),
@@ -45,8 +49,33 @@ export default function ExpenseCaptureModal({ rawText, onClose }: ExpenseCapture
       transaction_time: time,
       emotion_tag: emotion,
     });
-    onClose();
+    setStep('result');
   };
+
+  if (step === 'result' && selectedEmotion) {
+    const segments = buildEmotionSegments({
+      ...DUMMY_EMOTION_BASE_STATS,
+      [selectedEmotion]: (DUMMY_EMOTION_BASE_STATS[selectedEmotion] ?? 0) + 1,
+    });
+    const dominant = segments[0]?.key ?? selectedEmotion;
+
+    return (
+      <Modal onClose={onClose}>
+        <EmotionDonutChart segments={segments} />
+        <ResultLabel>나는 요즘</ResultLabel>
+        <ResultMessage>{EMOTION_MESSAGES[dominant]}</ResultMessage>
+        <ReportLink
+          type="button"
+          onClick={() => {
+            onClose();
+            navigate('/analysis/report');
+          }}
+        >
+          나의 소비 패턴 바로보기
+        </ReportLink>
+      </Modal>
+    );
+  }
 
   if (step === 'emotion') {
     return (
@@ -354,4 +383,34 @@ const ProgressLabel = styled.div`
   margin-top: 6px;
   font-size: 11px;
   color: #999;
+`;
+
+const ResultLabel = styled.div`
+  text-align: center;
+  font-size: 14px;
+  font-weight: 700;
+  color: #6a5ce6;
+  margin: 24px 0 8px;
+`;
+
+const ResultMessage = styled.div`
+  text-align: center;
+  font-size: 16px;
+  font-weight: 800;
+  border: 2px solid #e0ddf7;
+  border-radius: 12px;
+  padding: 14px;
+  margin-bottom: 16px;
+`;
+
+const ReportLink = styled.button`
+  display: block;
+  width: 100%;
+  background: none;
+  border: none;
+  text-decoration: underline;
+  color: #444;
+  font-size: 13px;
+  text-align: center;
+  cursor: pointer;
 `;
