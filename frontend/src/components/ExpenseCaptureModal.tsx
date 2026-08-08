@@ -102,7 +102,7 @@ export default function ExpenseCaptureModal({ rawText, onClose }: ExpenseCapture
         <RecordButton type="button" disabled={!selectedEmotion} onClick={() => record(selectedEmotion ?? undefined)}>
           기록 완료
         </RecordButton>
-        <SkipButton type="button" onClick={() => record()}>
+        <SkipButton type="button" onClick={() => { record(); onClose(); }}>
           나중에 태그할게요
         </SkipButton>
 
