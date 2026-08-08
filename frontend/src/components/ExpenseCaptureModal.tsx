@@ -100,9 +100,9 @@ export default function ExpenseCaptureModal({ rawText, onClose }: ExpenseCapture
           ))}
         </EmotionGrid>
 
-        <PrimaryButton type="button" disabled={!selectedEmotion} onClick={() => record(selectedEmotion ?? undefined)}>
+        <RecordButton type="button" disabled={!selectedEmotion} onClick={() => record(selectedEmotion ?? undefined)}>
           기록 완료
-        </PrimaryButton>
+        </RecordButton>
         <SkipButton type="button" onClick={() => record()}>
           나중에 태그할게요
         </SkipButton>
@@ -319,6 +319,22 @@ const SkipButton = styled.button`
   text-align: center;
   padding: 14px 0 0;
   cursor: pointer;
+`;
+
+const RecordButton = styled.button`
+  width: 100%;
+  height: 48px;
+  border-radius: 12px;
+  background: #fff;
+  color: #6a5ce6;
+  border: 2px solid #6a5ce6;
+  font-weight: 700;
+  cursor: pointer;
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
 `;
 
 const SelectFieldWrap = styled.div`
