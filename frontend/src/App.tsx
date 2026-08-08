@@ -28,6 +28,8 @@ import AddExpense from './pages/AddExpense';
 import AddIncome from './pages/AddIncome';
 import DayTransactions from './pages/DayTransactions';
 import TransactionDetail from './pages/transaction/TransactionDetail';
+import SatisfactionSurvey from './pages/satisfaction/SatisfactionSurvey';
+import SatisfactionResult from './pages/satisfaction/SatisfactionResult';
 
 // TODO: replace with real auth state
 const isLoggedIn = true;
@@ -66,6 +68,8 @@ export default function App() {
         <Route path="/mypage/edit/residence" element={<EditResidence />} />
         <Route path="/mypage/edit/password" element={<EditPassword />} />
         <Route path="/notification" element={<Notification />} />
+        <Route path="/satisfaction/result" element={<SatisfactionResult />} />
+        <Route path="/satisfaction/:transactionId" element={<SatisfactionSurvey />} />
       </Route>
 
       
