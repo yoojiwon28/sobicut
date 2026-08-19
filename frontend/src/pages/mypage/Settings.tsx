@@ -4,14 +4,26 @@ import BackButton from '../../components/BackButton';
 import ArrowRow from '../../components/ArrowRow';
 import ToggleSwitch from '../../components/ToggleSwitch';
 import { AuthTitle, PageWrap } from '../../styles/auth.styles';
+import { useNavigate } from 'react-router-dom';
+import { logout as logoutApi } from '../../api/auth';
+import { useAuth } from '../../contexts/AuthContext';
 
 export default function Settings() {
   const [cuttyAlert, setCuttyAlert] = useState(true);
   const [ledgerHelperAlert, setLedgerHelperAlert] = useState(true);
   const [surveyAlert, setSurveyAlert] = useState(true);
+  const navigate = useNavigate();
+  const { logout } = useAuth();
 
-  const handleLogout = () => {
-    // TODO: 로그아웃 처리
+  const handleLogout = async () => {
+    try {
+      await logoutApi();
+    } catch {
+      // 서버 로그아웃 실패해도 클라이언트 세션은 정리함
+    } finally {
+      logout();
+      navigate('/onboarding');
+    }
   };
 
   const handleWithdraw = () => {

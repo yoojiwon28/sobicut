@@ -101,6 +101,19 @@ export const ButtonPrimary = styled.button`
   }
 `;
 
+export const ButtonOutline = styled.button`
+  width: 100%;
+  height: 52px;
+  border: 2px solid #6a5ce6;
+  border-radius: 12px;
+  background: #fff;
+  color: #6a5ce6;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  margin-top: 8px;
+`;
+
 export const Links = styled.div`
   display: flex;
   justify-content: center;

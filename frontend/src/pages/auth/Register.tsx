@@ -1,10 +1,13 @@
 import { useState, type FormEvent, type ChangeEvent } from 'react';
+import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import BackButton from '../../components/BackButton';
 import Logo from '../../components/Logo';
 import eyeIcon from '../../assets/images/eye_icon.svg';
 import closedEyeIcon from '../../assets/images/closed_eye_icon.svg';
 import checkIcon from '../../assets/images/check_icon.svg';
+import { checkEmail, validatePassword } from '../../api/auth';
+import { ApiError } from '../../api/client';
 import {
   AuthTitle,
   Field,
@@ -28,8 +31,16 @@ const CheckMark = styled.span`
   align-items: center;
 `;
 
+const HelperText = styled.span<{ $tone: 'ok' | 'error' }>`
+  display: block;
+  margin-top: 6px;
+  font-size: 12px;
+  color: ${({ $tone }) => ($tone === 'ok' ? '#2ecc71' : '#e74c3c')};
+`;
+
 export default function Register() {
-  const [id, setId] = useState('');
+  const navigate = useNavigate();
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [passwordConfirm, setPasswordConfirm] = useState('');
@@ -37,56 +48,65 @@ export default function Register() {
   const [showPassword, setShowPassword] = useState(false);
   const [agreeRequired, setAgreeRequired] = useState(false);
   const [agreeMarketing, setAgreeMarketing] = useState(false);
-  const [idAvailable, setIdAvailable] = useState(false);
+
   const [emailAvailable, setEmailAvailable] = useState(false);
+  const [emailChecking, setEmailChecking] = useState(false);
+  const [emailMessage, setEmailMessage] = useState('');
+
+  const [passwordServerMessage, setPasswordServerMessage] = useState('');
 
   const passwordMatches = passwordConfirm.length > 0 && password === passwordConfirm;
   const passwordValid = PASSWORD_REGEX.test(password);
 
-  const canSubmit =
-    idAvailable && emailAvailable && agreeRequired && passwordValid && passwordMatches;
-
-  const handleIdChange = (e: ChangeEvent<HTMLInputElement>) => {
-    setId(e.target.value);
-    setIdAvailable(false); // 값 바뀌면 재확인 필요
-  };
+  const canSubmit = emailAvailable && agreeRequired && passwordValid && passwordMatches;
 
   const handleEmailChange = (e: ChangeEvent<HTMLInputElement>) => {
     setEmail(e.target.value);
     setEmailAvailable(false); // 값 바뀌면 재확인 필요
+    setEmailMessage('');
   };
 
-  const handleCheckDuplicate = () => {
-    // 아이디 중복 확인 API 연동 -> 사용 가능하면 setIdAvailable(true)
+  const handleCheckEmail = async () => {
+    if (!email) return;
+    setEmailChecking(true);
+    setEmailMessage('');
+    try {
+      const { is_available } = await checkEmail(email);
+      setEmailAvailable(is_available);
+      setEmailMessage(is_available ? '사용 가능한 이메일이에요.' : '이미 사용 중인 이메일이에요.');
+    } catch (err) {
+      setEmailAvailable(false);
+      setEmailMessage(err instanceof ApiError ? err.message : '이메일 확인에 실패했어요.');
+    } finally {
+      setEmailChecking(false);
+    }
   };
 
-  const handleCheckEmailDuplicate = () => {
-    // 이메일 중복 확인 API 연동 -> 사용 가능하면 setEmailAvailable(true)
+  const handlePasswordBlur = async () => {
+    setPasswordServerMessage('');
+    if (!passwordValid) return;
+    try {
+      const { is_valid, message } = await validatePassword(password);
+      if (!is_valid) setPasswordServerMessage(message);
+    } catch {
+      // 서버 2차 검증 실패는 조용히 무시 (1차 프론트 검증으로 충분)
+    }
   };
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
-    // 회원가입 API 연동 -> 성공 시 /register-profile 이동
+    if (!canSubmit) return;
+    navigate('/register-profile', { state: { email, password, nickname } });
   };
 
   return (
     <form onSubmit={handleSubmit}>
       <BackButton to="/login" />
       <Logo />
-      <AuthTitle>REGISTER</AuthTitle>
+      <AuthTitle>회원가입</AuthTitle>
 
       <Field>
-        <Label htmlFor="id">아이디</Label>
-        <InputRow>
-          <Input id="id" placeholder="4~12자, 영문/숫자" value={id} onChange={handleIdChange} />
-          <ButtonDark type="button" onClick={handleCheckDuplicate}>
-            중복 확인
-          </ButtonDark>
-        </InputRow>
-      </Field>
-
-      <Field>
-        <Label htmlFor="email">이메일</Label>
+        <Label htmlFor="email">이메일 (아이디)</Label>
         <InputRow>
           <Input
             id="email"
@@ -95,10 +115,11 @@ export default function Register() {
             value={email}
             onChange={handleEmailChange}
           />
-          <ButtonDark type="button" onClick={handleCheckEmailDuplicate}>
-            중복 확인
+          <ButtonDark type="button" onClick={handleCheckEmail} disabled={!email || emailChecking}>
+            {emailChecking ? '확인 중...' : '중복 확인'}
           </ButtonDark>
         </InputRow>
+        {emailMessage && <HelperText $tone={emailAvailable ? 'ok' : 'error'}>{emailMessage}</HelperText>}
       </Field>
 
       <Field>
@@ -110,23 +131,18 @@ export default function Register() {
             placeholder="8~12자, 영문+숫자+특수문자 포함"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
+            onBlur={handlePasswordBlur}
           />
           <button type="button" onClick={() => setShowPassword((v) => !v)} aria-label="비밀번호 표시 전환">
             <img src={showPassword ? eyeIcon : closedEyeIcon} alt="" width={20} height={20} />
           </button>
         </InputIconWrap>
         {password.length > 0 && (
-          <span
-            style={{
-              display: 'block',
-              marginTop: 6,
-              fontSize: 12,
-              color: passwordValid ? '#2ecc71' : '#e74c3c',
-            }}
-          >
+          <HelperText $tone={passwordValid ? 'ok' : 'error'}>
             {passwordValid ? '사용가능한 비밀번호입니다.' : '사용 불가능한 비밀번호입니다.'}
-          </span>
+          </HelperText>
         )}
+        {passwordServerMessage && <HelperText $tone="error">{passwordServerMessage}</HelperText>}
       </Field>
 
       <Field>
@@ -161,7 +177,7 @@ export default function Register() {
       </CheckboxRow>
 
       <ButtonPrimary type="submit" disabled={!canSubmit}>
-        가입하기
+        다음
       </ButtonPrimary>
     </form>
   );
