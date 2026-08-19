@@ -13,8 +13,13 @@ import { ApiError } from '../../api/client';
 const ErrorText = styled.p`
   color: #e74c3c;
   font-size: 13px;
+  font-weight: 600;
   text-align: center;
-  margin: 8px 0 0;
+  margin: 16px 0 0;
+`;
+
+const PasswordField = styled(Field)`
+  margin-bottom: 10px;
 `;
 
 export default function Login() {
@@ -47,14 +52,14 @@ export default function Login() {
     <form onSubmit={handleSubmit}>
       <BackButton to="/onboarding" />
       <Logo />
-      <AuthTitle>LOGIN</AuthTitle>
+      <AuthTitle>로그인</AuthTitle>
 
       <Field>
         <Label htmlFor="email">이메일</Label>
         <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
       </Field>
 
-      <Field>
+      <PasswordField>
         <Label htmlFor="password">비밀번호</Label>
         <InputIconWrap>
           <Input
@@ -67,13 +72,16 @@ export default function Login() {
             <img src={showPassword ? eyeIcon : closedEyeIcon} alt="" width={20} height={20} />
           </button>
         </InputIconWrap>
-      </Field>
+      </PasswordField>
 
-      {error && <ErrorText>{error}</ErrorText>}
-
+       
       <ButtonPrimary type="submit" disabled={submitting}>
         {submitting ? '로그인 중...' : '로그인'}
       </ButtonPrimary>
+      {error && <ErrorText>{error}</ErrorText>}
+
+
+     
 
       <Links>
         <Link to="/register">계정 만들기</Link>

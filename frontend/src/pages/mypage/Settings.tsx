@@ -7,6 +7,7 @@ import { AuthTitle, PageWrap } from '../../styles/auth.styles';
 import { useNavigate } from 'react-router-dom';
 import { logout as logoutApi } from '../../api/auth';
 import { useAuth } from '../../contexts/AuthContext';
+import WithdrawModal from '../../components/WithdrawModal';
 
 export default function Settings() {
   const [cuttyAlert, setCuttyAlert] = useState(true);
@@ -14,6 +15,7 @@ export default function Settings() {
   const [surveyAlert, setSurveyAlert] = useState(true);
   const navigate = useNavigate();
   const { logout } = useAuth();
+  const [showWithdrawModal, setShowWithdrawModal] = useState(false);
 
   const handleLogout = async () => {
     try {
@@ -27,7 +29,7 @@ export default function Settings() {
   };
 
   const handleWithdraw = () => {
-    // TODO: 회원탈퇴 처리
+    setShowWithdrawModal(true);
   };
 
   return (
@@ -66,6 +68,15 @@ export default function Settings() {
           회원탈퇴
         </button>
       </FooterLinks>
+      {showWithdrawModal && (
+        <WithdrawModal
+          onClose={() => setShowWithdrawModal(false)}
+          onSuccess={() => {
+            logout();
+            navigate('/onboarding');
+          }}
+        />
+      )}  
     </PageWrap>
   );
 }

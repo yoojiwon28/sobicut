@@ -41,3 +41,10 @@ export function logout() {
     method: 'GET',
   });
 }
+
+export function withdraw(password: string) {
+  return apiFetch<{ message: string }>('/auth/withdraw', {
+    method: 'PATCH',
+    body: JSON.stringify({ password }),
+  });
+}
