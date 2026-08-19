@@ -1,11 +1,20 @@
-import { useState, type FormEvent } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useState, type FormEvent } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import BackButton from '../../components/BackButton';
 import Logo from '../../components/Logo';
 import { AuthTitle, Field, Label, Select, Input, ButtonPrimary, CheckboxRow } from '../../styles/auth.styles';
+import { signup } from '../../api/auth';
+import { ApiError } from '../../api/client';
 
-const LIVING_OPTIONS = ['자취', '본가','기숙사'];
+const LIVING_OPTIONS = ['자취', '기숙사', '통학'];
+
+function mapIncomeToLevel(income: number): string {
+  if (income < 30) return 'under-30';
+  if (income < 60) return '30-60';
+  if (income < 100) return '60-100';
+  return 'over-100';
+}
 
 const IncomeSlider = styled.input`
   width: 100%;
@@ -47,24 +56,61 @@ const IncomeValue = styled.span`
   font-size: 14px;
 `;
 
+const ErrorText = styled.p`
+  color: #e74c3c;
+  font-size: 13px;
+  text-align: center;
+  margin: 8px 0 0;
+`;
+
+type RegisterState = { email: string; password: string; nickname: string };
+
 export default function RegisterProfile() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const state = location.state as RegisterState | null;
+
+  // Register 단계를 건너뛰고 직접 접근한 경우 되돌려보냄
+  useEffect(() => {
+    if (!state?.email) {
+      navigate('/register', { replace: true });
+    }
+  }, [state, navigate]);
+
   const [livingType, setLivingType] = useState('');
   const [income, setIncome] = useState(70);
   const [manualIncome, setManualIncome] = useState(false);
   const [agreeDetail, setAgreeDetail] = useState(false);
   const [agreePersonalized, setAgreePersonalized] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState('');
 
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    // 프로필 저장 API 연동
-    navigate('/');
+    if (!state?.email || !livingType || submitting) return;
+
+    setSubmitting(true);
+    setError('');
+    try {
+      await signup({
+        email: state.email,
+        password: state.password,
+        nickname: state.nickname,
+        residence_type: livingType,
+        income_level: mapIncomeToLevel(income),
+      });
+      navigate('/');
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : '회원가입에 실패했어요. 다시 시도해주세요.');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
     <form onSubmit={handleSubmit}>
       <BackButton to="/register" />
-      <Logo/>
+      <Logo />
       <AuthTitle $align="left" $size={20}>
         추가 정보를 입력해주세요
       </AuthTitle>
@@ -115,11 +161,19 @@ export default function RegisterProfile() {
         (선택) 상세 정보 제공 동의
       </CheckboxRow>
       <CheckboxRow>
-        <input type="checkbox" checked={agreePersonalized} onChange={(e) => setAgreePersonalized(e.target.checked)} />
+        <input
+          type="checkbox"
+          checked={agreePersonalized}
+          onChange={(e) => setAgreePersonalized(e.target.checked)}
+        />
         (선택) 맞춤형 서비스 제공 이용
       </CheckboxRow>
 
-      <ButtonPrimary type="submit">시작하기</ButtonPrimary>
+      {error && <ErrorText>{error}</ErrorText>}
+
+      <ButtonPrimary type="submit" disabled={!livingType || submitting}>
+        {submitting ? '가입 중...' : '시작하기'}
+      </ButtonPrimary>
     </form>
   );
 }
