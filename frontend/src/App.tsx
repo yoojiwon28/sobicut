@@ -34,7 +34,6 @@ import TransactionDetail from './pages/transaction/TransactionDetail';
 import SatisfactionSurvey from './pages/satisfaction/SatisfactionSurvey';
 import SatisfactionResult from './pages/satisfaction/SatisfactionResult';
 
-
 export default function App() {
     const { isLoggedIn } = useAuth();
   return (
