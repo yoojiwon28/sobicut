@@ -43,7 +43,7 @@ export async function apiFetch<T>(path: string, options: RequestInit = {}): Prom
     throw err;
   }
 
-  const AUTH_REDIRECT_EXEMPT_PATHS = ['/auth/login', '/auth/withdraw'];
+  const AUTH_REDIRECT_EXEMPT_PATHS = ['/auth/login', '/auth/withdraw', '/users/me/password'];
 
   if (res.status === 401 && !AUTH_REDIRECT_EXEMPT_PATHS.includes(path)) {
     clearToken();

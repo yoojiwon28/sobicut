@@ -1,7 +1,11 @@
 import { useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useMutation } from '@tanstack/react-query';
+import styled from 'styled-components';
 import BackButton from '../../components/BackButton';
 import { AuthTitle, Field, Label, Input, FormColumn, ButtonPrimary } from '../../styles/auth.styles';
+import { updatePassword } from '../../api/users';
+import { ApiError } from '../../api/client';
 
 export default function EditPassword() {
   const navigate = useNavigate();
@@ -12,10 +16,17 @@ export default function EditPassword() {
   const canSubmit =
     currentPassword.length > 0 && newPassword.length > 0 && newPassword === newPasswordConfirm;
 
+  const mutation = useMutation({
+    mutationFn: () => updatePassword(currentPassword, newPassword),
+    onSuccess: () => {
+      navigate('/mypage/edit');
+    },
+  });
+
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
-    // TODO: PATCH /users/me/password { current_password: currentPassword, new_password: newPassword }
-    navigate('/mypage/edit');
+    if (!canSubmit) return;
+    mutation.mutate();
   };
 
   return (
@@ -43,12 +54,25 @@ export default function EditPassword() {
               onChange={(e) => setNewPasswordConfirm(e.target.value)}
             />
           </Field>
+
+          {mutation.isError && (
+            <ErrorText>
+              {mutation.error instanceof ApiError ? mutation.error.message : '변경에 실패했어요. 다시 시도해주세요.'}
+            </ErrorText>
+          )}
         </div>
 
-        <ButtonPrimary type="submit" disabled={!canSubmit}>
-          변경하기
+        <ButtonPrimary type="submit" disabled={!canSubmit || mutation.isPending}>
+          {mutation.isPending ? '변경 중...' : '변경하기'}
         </ButtonPrimary>
       </FormColumn>
     </form>
   );
 }
+
+const ErrorText = styled.p`
+  color: #e74c3c;
+  font-size: 13px;
+  text-align: center;
+  margin: 8px 0 0;
+`;
