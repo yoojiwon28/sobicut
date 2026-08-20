@@ -10,10 +10,10 @@ export type Transaction = {
   amount: number;
   type: TransactionType;
   category: string;
-  merchant: string;
-  description: string;
+  merchant: string | null;
+  description: string | null;
   transaction_date: string; // 'YYYY-MM-DD'
-  transaction_time: string; // 'HH:mm'
+  transaction_time: string; // 'HH:mm:ss'
   emotion_tags: EmotionTag[];
   created_at: string;
 };
