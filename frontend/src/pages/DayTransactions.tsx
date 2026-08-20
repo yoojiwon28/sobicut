@@ -1,16 +1,21 @@
 import { useNavigate, useParams } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import styled from 'styled-components';
 import BackButton from '../components/BackButton';
 import ExpenseList from '../components/ExpenseList';
 import { AuthTitle } from '../styles/auth.styles';
-import { DUMMY_CALENDAR_TRANSACTIONS } from '../mocks/transactions';
+import { getTransactions } from '../api/transactions';
 import { formatKoreanDate } from '../utils/date';
 
 export default function DayTransactions() {
   const navigate = useNavigate();
   const { date = '' } = useParams<{ date: string }>();
 
-  const items = DUMMY_CALENDAR_TRANSACTIONS.filter((tx) => tx.transaction_date === date);
+  const { data: items = [] } = useQuery({
+    queryKey: ['transactions', { date }],
+    queryFn: () => getTransactions({ date }),
+    enabled: !!date,
+  });
 
   const expenseTotal = items.filter((tx) => tx.type === 'expense').reduce((sum, tx) => sum + tx.amount, 0);
   const incomeTotal = items.filter((tx) => tx.type === 'income').reduce((sum, tx) => sum + tx.amount, 0);
