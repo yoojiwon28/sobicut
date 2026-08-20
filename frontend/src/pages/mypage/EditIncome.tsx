@@ -1,23 +1,39 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import styled from 'styled-components';
 import BackButton from '../../components/BackButton';
 import { AuthTitle, Field, Label, Input, FormColumn, ButtonPrimary } from '../../styles/auth.styles';
-
-const DUMMY_SETTINGS = {
-  income_level: '30-60',
-};
+import { getSettings, updateIncomeLevel } from '../../api/users';
+import { mapIncomeToLevel, levelToIncome } from '../../utils/income';
+import { ApiError } from '../../api/client';
 
 export default function EditIncome() {
   const navigate = useNavigate();
-  const initial = Number(DUMMY_SETTINGS.income_level.split('-')[0]) || 0;
-  const [income, setIncome] = useState(initial);
+  const queryClient = useQueryClient();
+  const { data: settings } = useQuery({
+    queryKey: ['users', 'me', 'settings'],
+    queryFn: getSettings,
+  });
+
+  const [income, setIncome] = useState(0);
   const [manualIncome, setManualIncome] = useState(false);
+
+  useEffect(() => {
+    if (settings) setIncome(levelToIncome(settings.income_level));
+  }, [settings]);
+
+  const mutation = useMutation({
+    mutationFn: () => updateIncomeLevel(mapIncomeToLevel(income)),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['users', 'me', 'settings'] });
+      navigate('/mypage/edit');
+    },
+  });
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
-    // TODO: PATCH /users/me/income-level { income_level: `${income}-${income + 30}` }
-    navigate('/mypage/edit');
+    mutation.mutate();
   };
 
   return (
@@ -56,9 +72,17 @@ export default function EditIncome() {
               <IncomeValue>{income}만 원</IncomeValue>
             </IncomeRow>
           </Field>
+
+          {mutation.isError && (
+            <ErrorText>
+              {mutation.error instanceof ApiError ? mutation.error.message : '변경에 실패했어요. 다시 시도해주세요.'}
+            </ErrorText>
+          )}
         </div>
 
-        <ButtonPrimary type="submit">변경하기</ButtonPrimary>
+        <ButtonPrimary type="submit" disabled={mutation.isPending}>
+          {mutation.isPending ? '변경 중...' : '변경하기'}
+        </ButtonPrimary>
       </FormColumn>
     </form>
   );
@@ -107,4 +131,11 @@ const IncomeValue = styled.span`
   padding: 8px 16px;
   border-radius: 8px;
   font-size: 14px;
+`;
+
+const ErrorText = styled.p`
+  color: #e74c3c;
+  font-size: 13px;
+  text-align: center;
+  margin: 8px 0 0;
 `;
