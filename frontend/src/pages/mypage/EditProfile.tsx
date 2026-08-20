@@ -1,35 +1,44 @@
 import styled from 'styled-components';
+import { useQuery } from '@tanstack/react-query';
 import BackButton from '../../components/BackButton';
 import ArrowRow from '../../components/ArrowRow';
 import { AuthTitle, PageWrap } from '../../styles/auth.styles';
 import { formatIncomeLevel } from '../../utils/income';
-
-// GET /users/me/settings 더미데이터
-const DUMMY_SETTINGS = {
-  email: 'test@test.com',
-  nickname: 'user1',
-  residence_type: '자취',
-  income_level: '30-60',
-};
+import { getSettings } from '../../api/users';
 
 export default function EditProfile() {
+  const { data: settings } = useQuery({
+    queryKey: ['users', 'me', 'settings'],
+    queryFn: getSettings,
+  });
+
+  if (!settings) {
+    return (
+      <PageWrap>
+        <BackButton to="/mypage/settings" />
+        <AuthTitle $size={20}>내 정보 수정</AuthTitle>
+        <LoadingText>불러오는 중...</LoadingText>
+      </PageWrap>
+    );
+  }
+
   return (
     <PageWrap>
       <BackButton to="/mypage/settings" />
       <AuthTitle $size={20}>내 정보 수정</AuthTitle>
 
-      <ArrowRow to="/mypage/edit/nickname" label="닉네임" value={DUMMY_SETTINGS.nickname} />
+      <ArrowRow to="/mypage/edit/nickname" label="닉네임" value={settings.nickname} />
 
       <Notice>[ 정확한 또래 비교를 위해 필요한 정보예요 ]</Notice>
 
-      <ArrowRow to="/mypage/edit/residence" label="거주 형태" value={DUMMY_SETTINGS.residence_type} />
+      <ArrowRow to="/mypage/edit/residence" label="거주 형태" value={settings.residence_type} />
 
       <ArrowRow to="/mypage/edit/income" label="소득 구간" />
-      <IncomeValue>{formatIncomeLevel(DUMMY_SETTINGS.income_level)}</IncomeValue>
+      <IncomeValue>{formatIncomeLevel(settings.income_level)}</IncomeValue>
 
       <Divider />
 
-      <ArrowRow label="아이디" value={DUMMY_SETTINGS.email} showArrow={false} />
+      <ArrowRow label="아이디" value={settings.email} showArrow={false} />
       <ArrowRow to="/mypage/edit/password" label="비밀번호 변경" />
     </PageWrap>
   );
@@ -51,4 +60,11 @@ const Divider = styled.hr`
   border: none;
   border-top: 1px solid #eee;
   margin: 4px 0;
+`;
+
+const LoadingText = styled.p`
+  text-align: center;
+  color: #999;
+  font-size: 13px;
+  padding: 60px 0;
 `;

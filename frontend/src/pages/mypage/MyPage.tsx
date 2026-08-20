@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import styled, { keyframes } from 'styled-components';
 import ArrowRow from '../../components/ArrowRow';
 import { PageWrap } from '../../styles/auth.styles';
@@ -12,6 +13,7 @@ import cuttyLv3 from '../../assets/images/character/cutty_lv3_shield.svg';
 import cuttyLv4 from '../../assets/images/character/cutty_lv4_wizard.svg';
 import cuttyLv5 from '../../assets/images/character/cutty_lv5_knight.svg';
 import cuttyLv6 from '../../assets/images/character/cutty_lv6_god.svg';
+import { getLevel, getSettings } from '../../api/users';
 
 const CHARACTER_IMAGES: Record<number, string> = {
   0: cuttyLv0,
@@ -23,35 +25,34 @@ const CHARACTER_IMAGES: Record<number, string> = {
   6: cuttyLv6,
 };
 
-// TODO: 실제 프로필 API로 교체 (이름/회원코드)
-const DUMMY_USER = {
-  name: '박영호',
-  memberCode: 'PYH1234',
-};
-
-// GET /users/me/level 더미데이터
-const DUMMY_LEVEL = {
-  level: 3,
-  level_name: '몬스터 커티',
-  current_exp: 420,
-  next_level_exp: 600,
-  description: '지갑의 뼈대가 잡히고 있어요! 기본적인 소비 관리가 아주 잘 되고 있네요',
-};
-
 export default function MyPage() {
   const [showHelp, setShowHelp] = useState(false);
-  const characterSrc = CHARACTER_IMAGES[DUMMY_LEVEL.level] ?? cuttyLv0;
-  const expRatio = Math.min(
-    100,
-    Math.round((DUMMY_LEVEL.current_exp / DUMMY_LEVEL.next_level_exp) * 100),
-  );
-  const remainingExp = Math.max(0, DUMMY_LEVEL.next_level_exp - DUMMY_LEVEL.current_exp);
+  const { data: level } = useQuery({
+    queryKey: ['users', 'me', 'level'],
+    queryFn: getLevel,
+  });
+  const { data: settings } = useQuery({
+    queryKey: ['users', 'me', 'settings'],
+    queryFn: getSettings,
+  });
+
+  if (!level || !settings) {
+    return (
+      <PageWrap>
+        <LoadingText>불러오는 중...</LoadingText>
+      </PageWrap>
+    );
+  }
+
+  const characterSrc = CHARACTER_IMAGES[level.level] ?? cuttyLv0;
+  const expRatio = Math.min(100, Math.round((level.current_exp / level.next_level_exp) * 100));
+  const remainingExp = Math.max(0, level.next_level_exp - level.current_exp);
 
   return (
     <PageWrap>
       <Header>
-        <UserName>{DUMMY_USER.name}</UserName>
-        <UserCode>{DUMMY_USER.memberCode}</UserCode>
+        <UserName>{settings.nickname}</UserName>
+        <UserCode>{settings.email}</UserCode>
       </Header>
       <Divider />
 
@@ -74,7 +75,7 @@ export default function MyPage() {
 
       <LevelSection>
         <LevelHeading>
-          Lv.{DUMMY_LEVEL.level} {DUMMY_LEVEL.level_name}
+          Lv.{level.level} {level.level_name}
         </LevelHeading>
 
         <ExpWrap>
@@ -82,16 +83,16 @@ export default function MyPage() {
             <ExpBarFill style={{ width: `${expRatio}%` }} />
           </ExpBarTrack>
           <ExpText>
-            {DUMMY_LEVEL.current_exp} / {DUMMY_LEVEL.next_level_exp}
+            {level.current_exp} / {level.next_level_exp}
           </ExpText>
           <ExpRemainingText>다음 레벨까지 {remainingExp} EXP</ExpRemainingText>
         </ExpWrap>
 
         <CharacterBox>
-          <CharacterImg src={characterSrc} alt={DUMMY_LEVEL.level_name} />
+          <CharacterImg src={characterSrc} alt={level.level_name} />
         </CharacterBox>
 
-        <MentBubble>{DUMMY_LEVEL.description}</MentBubble>
+        <MentBubble>{level.description}</MentBubble>
       </LevelSection>
 
       <MenuList>
@@ -128,7 +129,6 @@ const HelpBox = styled.div`
   margin-left: 4px;
   margin-bottom: 8px;
 `;
-
 
 const HelpIconButton = styled.button`
   width: 30px;
@@ -271,4 +271,11 @@ const MenuList = styled.div`
   > *:not(:last-child) {
     border-bottom: 1px solid #eee;
   }
+`;
+
+const LoadingText = styled.p`
+  text-align: center;
+  color: #999;
+  font-size: 13px;
+  padding: 60px 0;
 `;
