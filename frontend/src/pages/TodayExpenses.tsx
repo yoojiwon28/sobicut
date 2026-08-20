@@ -1,16 +1,25 @@
 import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import styled from 'styled-components';
 import BackButton from '../components/BackButton';
 import ExpenseList from '../components/ExpenseList';
 import { AuthTitle } from '../styles/auth.styles';
-import { DUMMY_TODAY_EXPENSES } from '../mocks/transactions';
+import { getTransactions } from '../api/transactions';
 import { formatKoreanDate } from '../utils/date';
+import { toDateKey } from '../utils/date';
 
 export default function TodayExpenses() {
   const navigate = useNavigate();
-  const total = DUMMY_TODAY_EXPENSES.reduce((sum, tx) => sum + tx.amount, 0);
+  const today = toDateKey(new Date());
 
-  const categoryTotals = DUMMY_TODAY_EXPENSES.reduce<Record<string, number>>((acc, tx) => {
+  const { data: items = [] } = useQuery({
+    queryKey: ['transactions', { date: today, type: 'expense' }],
+    queryFn: () => getTransactions({ date: today, type: 'expense' }),
+  });
+
+  const total = items.reduce((sum, tx) => sum + tx.amount, 0);
+
+  const categoryTotals = items.reduce<Record<string, number>>((acc, tx) => {
     acc[tx.category] = (acc[tx.category] ?? 0) + tx.amount;
     return acc;
   }, {});
@@ -19,14 +28,14 @@ export default function TodayExpenses() {
     .sort((a, b) => b[1] - a[1])
     .map(([category, amount]) => ({
       category,
-      percent: Math.round((amount / total) * 100),
+      percent: total > 0 ? Math.round((amount / total) * 100) : 0,
     }));
 
   return (
     <Page>
       <BackButton to="/" />
       <AuthTitle $size={20}>오늘의 지출</AuthTitle>
-      <DateText>{formatKoreanDate(DUMMY_TODAY_EXPENSES[0]?.transaction_date ?? '')}</DateText>
+      <DateText>{formatKoreanDate(today)}</DateText>
 
       <TotalBox>
         <TotalLabel>총 지출 : {total.toLocaleString()} 원</TotalLabel>
@@ -40,7 +49,7 @@ export default function TodayExpenses() {
         </BreakdownList>
       </TotalBox>
 
-      <ExpenseList items={DUMMY_TODAY_EXPENSES} showArrow onRowClick={(tx) => navigate(`/transactions/${tx.id}`)} />
+      <ExpenseList items={items} showArrow onRowClick={(tx) => navigate(`/transactions/${tx.id}`)} />
     </Page>
   );
 }

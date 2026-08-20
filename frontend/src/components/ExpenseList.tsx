@@ -35,9 +35,9 @@ export default function ExpenseList({
             )}
           </ItemIcon>
           <ItemInfo>
-            <ItemName>{tx.merchant}</ItemName>
+            <ItemName>{tx.merchant || tx.category}</ItemName>
             <ItemMeta>
-              {tx.transaction_time} · {tx.category}
+            {tx.transaction_time.slice(0, 5)} · {tx.category}
             </ItemMeta>
           </ItemInfo>
           <ItemAmount>
