@@ -1,19 +1,14 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { StyledCalendar } from '../styles/calendar.styles';
 import styled from 'styled-components';
 import Logo2 from '../components/Logo2';
-import type { Transaction } from '../types/transaction';
 import { CATEGORY_ICONS } from '../utils/category';
-import { DUMMY_CALENDAR_TRANSACTIONS } from '../mocks/transactions';
+import { getTransactions } from '../api/transactions';
+import { getDailyReport } from '../api/reports';
 import incomeIcon from '../assets/images/income_icon.svg';
 import expenseIcon from '../assets/images/expense_icon.svg';
-
-type DayGroup = {
-  expenseTotal: number;
-  incomeTotal: number;
-  items: Transaction[];
-};
 
 const toKey = (date: Date) =>
   `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
@@ -24,29 +19,35 @@ const isSameDay = (a: Date, b: Date) =>
 export default function CalendarPage() {
   const navigate = useNavigate();
   const [selectedDate, setSelectedDate] = useState(new Date());
+  const [activeStartDate, setActiveStartDate] = useState(new Date());
   const [showAddModal, setShowAddModal] = useState(false);
   const today = new Date();
 
-  // 날짜별로 묶어서 지출/수입 합계 계산
-  const groupedByDate = useMemo(() => {
-    const map: Record<string, DayGroup> = {};
-    for (const tx of DUMMY_CALENDAR_TRANSACTIONS) {
-      const key = tx.transaction_date;
-      if (!map[key]) {
-        map[key] = { expenseTotal: 0, incomeTotal: 0, items: [] };
-      }
-      if (tx.type === 'expense') {
-        map[key].expenseTotal += tx.amount;
-      } else {
-        map[key].incomeTotal += tx.amount;
-      }
-      map[key].items.push(tx);
+  const year = activeStartDate.getFullYear();
+  const month = activeStartDate.getMonth() + 1;
+  const selectedKey = toKey(selectedDate);
+
+  // 캘린더 날짜별 합계 
+  const { data: dailyReport = [] } = useQuery({
+    queryKey: ['reports', 'daily', { year, month }],
+    queryFn: () => getDailyReport({ year, month }),
+  });
+
+  const dailyMap = useMemo(() => {
+    const map: Record<string, { income: number; expense: number }> = {};
+    for (const row of dailyReport) {
+      map[row.date] = { income: row.income, expense: row.expense };
     }
     return map;
-  }, []);
+  }, [dailyReport]);
 
-  const selectedKey = toKey(selectedDate);
-  const selectedGroup = groupedByDate[selectedKey];
+  // 선택된 날짜 패널용: 그날 개별 내역
+  const { data: dayItems = [] } = useQuery({
+    queryKey: ['transactions', { date: selectedKey }],
+    queryFn: () => getTransactions({ date: selectedKey }),
+  });
+
+  const selectedTotals = dailyMap[selectedKey];
 
   return (
     <Page>
@@ -60,6 +61,9 @@ export default function CalendarPage() {
       <StyledCalendar
         value={selectedDate}
         onClickDay={(date) => setSelectedDate(date)}
+        onActiveStartDateChange={({ activeStartDate: next }) => {
+          if (next) setActiveStartDate(next);
+        }}
         locale="ko-KR"
         calendarType="gregory"
         formatDay={(_, date) => String(date.getDate())}
@@ -75,16 +79,16 @@ export default function CalendarPage() {
         }}
         tileContent={({ date, view }) => {
           if (view !== 'month') return null;
-          const group = groupedByDate[toKey(date)];
-          if (!group) return null;
+          const totals = dailyMap[toKey(date)];
+          if (!totals) return null;
           const selected = isSameDay(date, selectedDate);
           return (
             <DayAmounts>
-              {group.expenseTotal > 0 && (
-                <ExpenseAmount $selected={selected}>-{group.expenseTotal.toLocaleString()}</ExpenseAmount>
+              {totals.expense > 0 && (
+                <ExpenseAmount $selected={selected}>-{totals.expense.toLocaleString()}</ExpenseAmount>
               )}
-              {group.incomeTotal > 0 && (
-                <IncomeAmount $selected={selected}>+{group.incomeTotal.toLocaleString()}</IncomeAmount>
+              {totals.income > 0 && (
+                <IncomeAmount $selected={selected}>+{totals.income.toLocaleString()}</IncomeAmount>
               )}
             </DayAmounts>
           );
@@ -94,17 +98,17 @@ export default function CalendarPage() {
       <ExpensePanel>
         <ExpensePanelHeader>
           <span>
-            {selectedDate.getMonth() + 1}/{selectedDate.getDate()} 지출 - {(selectedGroup?.expenseTotal ?? 0).toLocaleString()}원
+            {selectedDate.getMonth() + 1}/{selectedDate.getDate()} 지출 - {(selectedTotals?.expense ?? 0).toLocaleString()}원
           </span>
-          {selectedGroup && (
+          {dayItems.length > 0 && (
             <MoreLink type="button" onClick={() => navigate(`/day/${selectedKey}`)}>
               + 더보기
             </MoreLink>
           )}
         </ExpensePanelHeader>
 
-        {selectedGroup ? (
-          selectedGroup.items.map((tx) => (
+        {dayItems.length > 0 ? (
+          dayItems.map((tx) => (
             <ExpenseRow key={tx.id}>
               <ItemIcon>
                 {CATEGORY_ICONS[tx.category] && (
@@ -112,9 +116,9 @@ export default function CalendarPage() {
                 )}
               </ItemIcon>
               <ItemInfo>
-                <ItemName>{tx.merchant}</ItemName>
+                <ItemName>{tx.merchant || tx.category}</ItemName>
                 <ItemMeta>
-                  {tx.transaction_time} · {tx.category}
+                  {tx.transaction_time.slice(0, 5)} · {tx.category}
                 </ItemMeta>
               </ItemInfo>
               <ItemAmount>
@@ -147,7 +151,6 @@ export default function CalendarPage() {
   );
 }
 
-// ---- styles ----
 
 const Page = styled.div`
   padding: 20px;
@@ -177,7 +180,6 @@ const AddButton = styled.button`
   appearance: none;
   cursor: pointer;
 `;
-
 
 const DayAmounts = styled.div`
   display: flex;
