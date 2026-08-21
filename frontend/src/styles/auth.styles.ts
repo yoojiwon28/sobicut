@@ -1,4 +1,4 @@
-import styled from 'styled-components';
+import styled, { keyframes } from 'styled-components';
 
 export const AuthWrapper = styled.div`
   max-width: 480px;
@@ -170,4 +170,30 @@ export const FormColumn = styled.div`
   justify-content: space-between;
   flex: 1;
   padding: 20px;
+`;
+
+const spin = keyframes`
+  to {
+    transform: rotate(360deg);
+  }
+`;
+
+export const Spinner = styled.span<{ $size?: number }>`
+  display: inline-block;
+  width: ${({ $size }) => $size ?? 36}px;
+  height: ${({ $size }) => $size ?? 36}px;
+  border: 4px solid #e2deff;
+  border-top-color: #6a5ce6;
+  border-radius: 50%;
+  animation: ${spin} 0.6s linear infinite;
+`;
+
+export const LoadingOverlay = styled.div`
+  position: fixed;
+  inset: 0;
+  background: rgba(255, 255, 255, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
 `;
