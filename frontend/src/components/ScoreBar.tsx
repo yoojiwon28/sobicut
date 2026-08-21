@@ -5,10 +5,18 @@ type ScoreBarProps = {
   max: number;
   markerValue: number;
   markerLabel: string;
+  markerValueLabel?: string;
   color?: string;
 };
 
-export default function ScoreBar({ value, max, markerValue, markerLabel, color = '#FF7D7D' }: ScoreBarProps) {
+export default function ScoreBar({
+  value,
+  max,
+  markerValue,
+  markerLabel,
+  markerValueLabel,
+  color = '#FF7D7D',
+}: ScoreBarProps) {
   const valuePercent = Math.min(100, Math.max(0, (value / max) * 100));
   const markerPercent = Math.min(100, Math.max(0, (markerValue / max) * 100));
 
@@ -21,20 +29,22 @@ export default function ScoreBar({ value, max, markerValue, markerLabel, color =
         </Marker>
       </Track>
       <MarkerLabel style={{ left: `${markerPercent}%` }}>{markerLabel}</MarkerLabel>
+      {markerValueLabel && <MarkerValueLabel style={{ left: `${markerPercent}%` }}>{markerValueLabel}</MarkerValueLabel>}
     </Wrap>
   );
 }
 
 const Wrap = styled.div`
   width: 100%;
+  padding-bottom: 4px;
 `;
 
 const Track = styled.div`
   position: relative;
   width: 100%;
-  height: 20px;
+  height: 26px;
   border-radius: 999px;
-  background: #ececec;
+  background: #f5f5f5;
   overflow: visible;
 `;
 
@@ -68,9 +78,22 @@ const Scissors = styled.span`
 
 const MarkerLabel = styled.div`
   position: relative;
+  width: fit-content;
   transform: translateX(-50%);
   margin-top: 4px;
   font-size: 10px;
   color: #888;
   white-space: nowrap;
+`;
+
+const MarkerValueLabel = styled.div`
+  position: relative;
+  width: fit-content;
+  transform: translateX(-50%);
+  margin-top: 2px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #666;
+  white-space: nowrap;
+  text-align: center;
 `;

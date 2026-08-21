@@ -25,11 +25,11 @@ function pointsAttr(points: readonly (readonly [number, number])[]) {
   return points.map(([x, y]) => `${x},${y}`).join(' ');
 }
 
-export default function RadarChart({ axes, max, size = 260, color = '#B9B4E8' }: RadarChartProps) {
+export default function RadarChart({ axes, max, size = 260, color = '#6A5CE6' }: RadarChartProps) {
   const cx = size / 2;
   const cy = size / 2;
   const radius = size * 0.32;
-  const labelRadius = radius + size * 0.14;
+  const labelRadius = radius + size * 0.16;
   const count = axes.length;
 
   const dataPoints = axes.map((axis, i) =>
@@ -37,23 +37,27 @@ export default function RadarChart({ axes, max, size = 260, color = '#B9B4E8' }:
   );
 
   return (
-    <Svg viewBox={`0 0 ${size} ${size}`} xmlns="http://www.w3.org/2000/svg">
+    <Svg $size={size} viewBox={`0 0 ${size} ${size}`} xmlns="http://www.w3.org/2000/svg">
       {RINGS.map((ratio) => (
         <polygon
           key={ratio}
           points={pointsAttr(axes.map((_, i) => hexPoint(i, count, radius * ratio, cx, cy)))}
           fill="none"
-          stroke="#e2e2e2"
+          stroke="#E8E8E8"
           strokeWidth={1}
         />
       ))}
 
       {axes.map((_, i) => {
         const [x, y] = hexPoint(i, count, radius, cx, cy);
-        return <line key={i} x1={cx} y1={cy} x2={x} y2={y} stroke="#e2e2e2" strokeWidth={1} />;
+        return <line key={i} x1={cx} y1={cy} x2={x} y2={y} stroke="#E8E8E8" strokeWidth={1} />;
       })}
 
-      <polygon points={pointsAttr(dataPoints)} fill={color} fillOpacity={0.55} stroke={color} strokeWidth={2} />
+      <polygon points={pointsAttr(dataPoints)} fill={color} fillOpacity={0.2} stroke={color} strokeWidth={2} />
+
+      {dataPoints.map(([x, y], i) => (
+        <circle key={i} cx={x} cy={y} r={4} fill={color} />
+      ))}
 
       {axes.map((axis, i) => {
         const [x, y] = hexPoint(i, count, labelRadius, cx, cy);
@@ -62,8 +66,8 @@ export default function RadarChart({ axes, max, size = 260, color = '#B9B4E8' }:
             key={axis.label}
             x={x}
             y={y}
-            fontSize={11}
-            fill="#666"
+            fontSize={12}
+            fill="#888"
             textAnchor="middle"
             dominantBaseline="middle"
           >
@@ -75,8 +79,10 @@ export default function RadarChart({ axes, max, size = 260, color = '#B9B4E8' }:
   );
 }
 
-const Svg = styled.svg`
-  width: 100%;
+const Svg = styled.svg<{ $size: number }>`
+  width: ${({ $size }) => $size}px;
+  max-width: 100%;
   height: auto;
   display: block;
+  margin: 0 auto;
 `;
