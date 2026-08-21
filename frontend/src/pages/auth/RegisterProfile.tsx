@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import BackButton from '../../components/BackButton';
 import Logo from '../../components/Logo';
-import { AuthTitle, Field, Label, Select, Input, ButtonPrimary, CheckboxRow } from '../../styles/auth.styles';
+import { AuthTitle, Field, Label, Select, Input, ButtonPrimary, CheckboxRow, LoadingOverlay, Spinner } from '../../styles/auth.styles';
 import { signup } from '../../api/auth';
 import { ApiError } from '../../api/client';
 
@@ -172,8 +172,14 @@ export default function RegisterProfile() {
       {error && <ErrorText>{error}</ErrorText>}
 
       <ButtonPrimary type="submit" disabled={!livingType || submitting}>
-        {submitting ? '가입 중...' : '시작하기'}
+        시작하기
       </ButtonPrimary>
+
+      {submitting && (
+        <LoadingOverlay>
+          <Spinner />
+        </LoadingOverlay>
+      )}
     </form>
   );
 }

@@ -5,7 +5,7 @@ import BackButton from '../../components/BackButton';
 import Logo from '../../components/Logo';
 import eyeIcon from '../../assets/images/eye_icon.svg';
 import closedEyeIcon from '../../assets/images/closed_eye_icon.svg';
-import { AuthTitle, Field, Label, Input, InputIconWrap, ButtonPrimary, Links } from '../../styles/auth.styles';
+import { AuthTitle, Field, Label, Input, InputIconWrap, ButtonPrimary, Links, LoadingOverlay, Spinner } from '../../styles/auth.styles';
 import { useAuth } from '../../contexts/AuthContext';
 import { login as loginApi } from '../../api/auth';
 import { ApiError } from '../../api/client';
@@ -76,9 +76,15 @@ export default function Login() {
 
        
       <ButtonPrimary type="submit" disabled={submitting}>
-        {submitting ? '로그인 중...' : '로그인'}
+        로그인
       </ButtonPrimary>
       {error && <ErrorText>{error}</ErrorText>}
+
+      {submitting && (
+        <LoadingOverlay>
+          <Spinner />
+        </LoadingOverlay>
+      )}
 
 
      
