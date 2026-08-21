@@ -10,6 +10,7 @@ import { CATEGORY_ICONS, CATEGORY_OPTIONS } from '../../utils/category';
 import incomeIcon from '../../assets/images/income_icon.svg';
 import expenseIcon from '../../assets/images/expense_icon.svg';
 import angleRightIcon from '../../assets/images/angle_right.svg';
+import editIcon from '../../assets/images/edit_icon.svg';
 
 export default function TransactionDetail() {
   const { id } = useParams<{ id: string }>();
@@ -69,53 +70,56 @@ export default function TransactionDetail() {
           {isExpense ? '-' : '+'}
           {tx.amount.toLocaleString()} 원
         </Amount>
-        <img
+        <CategoryIcon
           src={CATEGORY_ICONS[tx.category] ?? (isExpense ? expenseIcon : incomeIcon)}
           alt=""
-          width={26}
-          height={26}
         />
       </DetailAmountRow>
 
-      <FieldGroup>
-        <FieldLabel>결제처</FieldLabel>
-        <OutlinedInput value={merchant} onChange={(e) => setMerchant(e.target.value)} />
-      </FieldGroup>
+      <StyledFieldGroup>
+        <StyledFieldLabel>결제처</StyledFieldLabel>
+        <MerchantInputWrap>
+          <StyledInput value={merchant} onChange={(e) => setMerchant(e.target.value)} />
+          <EditIcon src={editIcon} alt="" />
+        </MerchantInputWrap>
+      </StyledFieldGroup>
 
-      <FieldGroup>
-        <FieldLabel>결제일시</FieldLabel>
-        <DateTimePickerField
-          date={date}
-          time={time}
-          onChange={(d, t) => {
-            setDate(d);
-            setTime(t);
-          }}
-        />
-      </FieldGroup>
+      <StyledFieldGroup>
+        <StyledFieldLabel>결제일시</StyledFieldLabel>
+        <DateFieldWrap>
+          <DateTimePickerField
+            date={date}
+            time={time}
+            onChange={(d, t) => {
+              setDate(d);
+              setTime(t);
+            }}
+          />
+        </DateFieldWrap>
+      </StyledFieldGroup>
 
-      <FieldGroup>
-        <FieldLabel>카테고리</FieldLabel>
+      <StyledFieldGroup>
+        <StyledFieldLabel>카테고리</StyledFieldLabel>
         <SelectFieldWrap>
-          <OutlinedSelect value={category} onChange={(e) => setCategory(e.target.value)}>
+          <StyledSelect value={category} onChange={(e) => setCategory(e.target.value)}>
             {CATEGORY_OPTIONS.map((option) => (
               <option key={option} value={option}>
                 {option}
               </option>
             ))}
-          </OutlinedSelect>
+          </StyledSelect>
           <ChevronIcon src={angleRightIcon} alt="" width={16} height={16} />
         </SelectFieldWrap>
-      </FieldGroup>
+      </StyledFieldGroup>
 
-      <FieldGroup>
-        <FieldLabel>메모</FieldLabel>
-        <OutlinedTextarea
+      <StyledFieldGroup>
+        <StyledFieldLabel>메모</StyledFieldLabel>
+        <StyledTextarea
           placeholder="메모를 작성해주세요"
           value={memo}
           onChange={(e) => setMemo(e.target.value)}
         />
-      </FieldGroup>
+      </StyledFieldGroup>
 
       <SubmitButton type="button" disabled={!isDirty} onClick={handleSubmit}>
         수정 완료
@@ -132,15 +136,118 @@ const DetailAmountRow = styled.div`
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: #efeafc;
-  border-radius: 14px;
-  padding: 16px 18px;
-  margin-bottom: 24px;
+  border-bottom: 1px solid #E5E5E5;
+  padding: 0 0 14px;
+  margin-bottom: 22px;
 `;
 
 const Amount = styled.span`
-  font-size: 24px;
-  font-weight: 700;
+  font-size: 34px;
+  font-weight: 800;
+`;
+
+const CategoryIcon = styled.img.attrs({ width: 30, height: 30 })`
+  filter: grayscale(1) opacity(0.85);
+`;
+
+const StyledFieldGroup = styled(FieldGroup)`
+  margin-bottom: 20px;
+`;
+
+const StyledFieldLabel = styled(FieldLabel)`
+  font-weight: 800;
+  color: #222;
+`;
+
+const fieldFillStyles = `
+  background: #F2F2F2;
+  border: none;
+  border-radius: 10px;
+  padding: 16px 18px;
+  font-size: 16px;
+  font-family: inherit;
+  color: #222;
+`;
+
+const StyledInput = styled(OutlinedInput)`
+  ${fieldFillStyles}
+  height: auto;
+
+  &::placeholder {
+    color: #9A9A9A;
+  }
+
+  &:focus {
+    outline: none;
+    background: #EAEAEA;
+    border-color: transparent;
+  }
+`;
+
+const StyledSelect = styled(OutlinedSelect)`
+  ${fieldFillStyles}
+  height: auto;
+
+  &:focus {
+    outline: none;
+    background: #EAEAEA;
+  }
+`;
+
+const StyledTextarea = styled(OutlinedTextarea)`
+  background: #F2F2F2;
+  border: none;
+  border-radius: 10px;
+  padding: 16px 18px;
+  font-size: 16px;
+  line-height: 1.5;
+  font-family: inherit;
+  color: #222;
+  min-height: 90px;
+  resize: none;
+
+  &::placeholder {
+    color: #9A9A9A;
+  }
+
+  &:focus {
+    outline: none;
+    background: #EAEAEA;
+  }
+`;
+
+const MerchantInputWrap = styled.div`
+  position: relative;
+`;
+
+const DateFieldWrap = styled.div`
+  input[readonly] {
+    background: #F2F2F2 !important;
+    border: none !important;
+    border-radius: 10px;
+    padding: 16px 44px 16px 18px;
+    font-size: 16px;
+    color: #222;
+  }
+
+  input[readonly]:focus {
+    outline: none !important;
+    box-shadow: none !important;
+    background: #EAEAEA !important;
+  }
+
+  button img {
+    filter: grayscale(1) opacity(0.85);
+  }
+`;
+
+const EditIcon = styled.img.attrs({ width: 18, height: 18 })`
+  position: absolute;
+  right: 18px;
+  top: 50%;
+  transform: translateY(-50%);
+  filter: grayscale(1) opacity(0.85);
+  pointer-events: none;
 `;
 
 const SelectFieldWrap = styled.div`
@@ -149,9 +256,10 @@ const SelectFieldWrap = styled.div`
 
 const ChevronIcon = styled.img`
   position: absolute;
-  right: 14px;
+  right: 18px;
   top: 50%;
   transform: translateY(-50%) rotate(90deg);
+  filter: grayscale(1) opacity(0.85);
   pointer-events: none;
 `;
 
@@ -164,13 +272,13 @@ const EmptyText = styled.p`
 
 const SubmitButton = styled.button`
   width: 100%;
-  margin-top: 24px;
-  padding: 14px 0;
+  margin-top: 30px;
+  padding: 16px 0;
   border: none;
   border-radius: 12px;
-  background: #7c4dff;
+  background: #6A5CE6;
   color: #fff;
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 700;
   cursor: pointer;
 

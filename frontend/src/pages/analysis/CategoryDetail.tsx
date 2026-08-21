@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import styled from 'styled-components';
 import BackButton from '../../components/BackButton';
 import ExpenseList from '../../components/ExpenseList';
@@ -15,12 +15,15 @@ type DateGroup = {
 
 export default function CategoryDetail() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { category = '' } = useParams<{ category: string }>();
   const [searchParams] = useSearchParams();
   const decoded = decodeURIComponent(category);
   const currentMonthKey = getMonthKey(new Date());
   const monthKey = searchParams.get('month') ?? currentMonthKey;
   const monthLabel = monthKey === currentMonthKey ? '이번 달' : formatMonthLabel(new Date(`${monthKey}-01`));
+  const fromParam = searchParams.get('from');
+  const backTo = fromParam ? decodeURIComponent(fromParam) : `/analysis/categories?month=${monthKey}`;
 
   const groups = useMemo(() => {
     const items = DUMMY_CALENDAR_TRANSACTIONS.filter(
@@ -46,64 +49,81 @@ export default function CategoryDetail() {
 
   return (
     <PageWrap>
-      <BackButton to={`/analysis/categories?month=${monthKey}`} />
+      <BackButton to={backTo} />
       <Header>
-        <MonthLabel>{monthLabel}</MonthLabel>
-        <CategoryTitle>{decoded}</CategoryTitle>
+        <HeaderLeft>
+          <MonthLabel>{monthLabel}</MonthLabel>
+          <CategoryTitle>{decoded}</CategoryTitle>
+        </HeaderLeft>
         <Total>{total.toLocaleString()}원</Total>
       </Header>
 
       {groups.length === 0 ? (
         <EmptyText>{monthLabel} {decoded} 소비 내역이 없어요.</EmptyText>
       ) : (
-        groups.map((group) => (
-          <DateGroupBlock key={group.date}>
-            <DateLabel>{formatMonthDay(group.date)}</DateLabel>
-            <ExpenseList
-              items={group.items}
-              showArrow
-              onRowClick={(tx) => {
-                const from = encodeURIComponent(`/analysis/categories/${encodeURIComponent(decoded)}?month=${monthKey}`);
-                navigate(`/transactions/${tx.id}?from=${from}`);
-              }}
-            />
-          </DateGroupBlock>
-        ))
+        <ListCard>
+          {groups.map((group) => (
+            <DateGroupBlock key={group.date}>
+              <DateLabel>{formatMonthDay(group.date)}</DateLabel>
+              <ExpenseList
+                items={group.items}
+                showArrow={false}
+                onRowClick={(tx) => {
+                  const from = encodeURIComponent(`${location.pathname}${location.search}`);
+                  navigate(`/transactions/${tx.id}?from=${from}`);
+                }}
+              />
+            </DateGroupBlock>
+          ))}
+        </ListCard>
       )}
     </PageWrap>
   );
 }
 
 const Header = styled.div`
-  margin-bottom: 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  border-bottom: 1px solid #E5E5E5;
+  padding-bottom: 14px;
+  margin-bottom: 18px;
 `;
 
+const HeaderLeft = styled.div``;
+
 const MonthLabel = styled.div`
-  font-size: 13px;
-  color: #888;
+  font-size: 16px;
+  color: #333;
 `;
 
 const CategoryTitle = styled.div`
-  font-size: 16px;
-  font-weight: 700;
-  margin-top: 2px;
+  font-size: 26px;
+  font-weight: 800;
+  color: #000;
+  margin-top: 4px;
 `;
 
 const Total = styled.div`
-  font-size: 26px;
+  font-size: 24px;
   font-weight: 800;
-  margin-top: 8px;
+  color: #898989;
 `;
 
-const DateGroupBlock = styled.div`
-  margin-bottom: 8px;
+const ListCard = styled.div`
+  background: #fff;
+  border-radius: 16px;
+  padding: 6px 18px 14px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
 `;
+
+const DateGroupBlock = styled.div``;
 
 const DateLabel = styled.div`
-  font-size: 12px;
-  color: #888;
-  padding: 12px 0 4px;
-  border-top: 1px solid #eee;
+  font-size: 16px;
+  font-weight: 800;
+  color: #8B8578;
+  padding: 18px 0 6px;
 `;
 
 const EmptyText = styled.div`

@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import styled from 'styled-components';
 import BackButton from '../../components/BackButton';
-import { AuthTitle, PageWrap } from '../../styles/auth.styles';
+import { PageWrap } from '../../styles/auth.styles';
 import { DUMMY_CALENDAR_TRANSACTIONS } from '../../mocks/transactions';
 import { CATEGORY_COLORS } from '../../utils/category';
 import { getMonthKey } from '../../utils/date';
@@ -34,7 +34,7 @@ export default function CategoryList() {
   return (
     <PageWrap>
       <BackButton to="/analysis" />
-      <AuthTitle $size={20}>카테고리 별 소비</AuthTitle>
+      <Title>카테고리 별 소비</Title>
 
       {rows.length === 0 ? (
         <EmptyText>이번 달 소비 내역이 없어요.</EmptyText>
@@ -44,7 +44,10 @@ export default function CategoryList() {
             <Row
               key={category}
               type="button"
-              onClick={() => navigate(`/analysis/categories/${encodeURIComponent(category)}?month=${monthKey}`)}
+              onClick={() => {
+                const from = encodeURIComponent(`/analysis/categories?month=${monthKey}`);
+                navigate(`/analysis/categories/${encodeURIComponent(category)}?month=${monthKey}&from=${from}`);
+              }}
             >
               <Dot style={{ background: CATEGORY_COLORS[category] ?? '#ccc' }} />
               <Info>
@@ -52,7 +55,7 @@ export default function CategoryList() {
                 <Percent>{percent}%</Percent>
               </Info>
               <Amount>{amount.toLocaleString()}원</Amount>
-              <img src={angleRightIcon} alt="" width={18} height={18} />
+              <Arrow src={angleRightIcon} alt="" width={18} height={18} />
             </Row>
           ))}
         </List>
@@ -61,14 +64,22 @@ export default function CategoryList() {
   );
 }
 
+const Title = styled.h1`
+  font-size: 24px;
+  font-weight: 800;
+  color: #000;
+  margin: 4px 0 18px;
+  text-align: left;
+`;
+
 const List = styled.div`
   background: #fff;
-  border-radius: 14px;
+  border-radius: 16px;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
-  padding: 4px 16px;
+  padding: 4px 18px;
 
   > *:not(:last-child) {
-    border-bottom: 1px solid #eee;
+    border-bottom: 1px solid #F0F0F0;
   }
 `;
 
@@ -77,7 +88,7 @@ const Row = styled.button`
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 14px 0;
+  padding: 18px 0;
   background: none;
   border: none;
   cursor: pointer;
@@ -96,19 +107,25 @@ const Info = styled.div`
 `;
 
 const Name = styled.div`
-  font-size: 14px;
-  font-weight: 700;
+  font-size: 16px;
+  font-weight: 800;
 `;
 
 const Percent = styled.div`
-  font-size: 11px;
-  color: #888;
-  margin-top: 2px;
+  font-size: 13px;
+  color: #8B8578;
+  margin-top: 3px;
 `;
 
 const Amount = styled.div`
-  font-size: 14px;
-  font-weight: 700;
+  font-size: 17px;
+  font-weight: 800;
+`;
+
+const Arrow = styled.img`
+  width: 18px;
+  height: 18px;
+  opacity: 0.5;
 `;
 
 const EmptyText = styled.div`

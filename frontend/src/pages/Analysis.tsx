@@ -5,6 +5,7 @@ import { PageWrap } from '../styles/auth.styles';
 import { DUMMY_CALENDAR_TRANSACTIONS } from '../mocks/transactions';
 import { DUMMY_BUDGET } from '../mocks/budget';
 import { getMonthKey, formatMonthLabel, addMonths, getWeekRange, toDateKey } from '../utils/date';
+import { CATEGORY_COLORS } from '../utils/category';
 import editIcon from '../assets/images/edit_icon.svg';
 import angleRightIcon from '../assets/images/angle_right.svg';
 import angleLeftIcon from '../assets/images/angle_left.svg';
@@ -42,9 +43,6 @@ const WEEKDAY_CUT: Partial<Record<string, string>> = {
   토: '주말 플렉스 컷',
   일: '주말 플렉스 컷',
 };
-
-// 도넛/범례/히트맵에 쓰이는 순위별 보라 단색 스케일
-const DONUT_COLORS = ['#221B75', '#4035B0', '#6A5CE6', '#E2DEFF'];
 
 function sumExpense(items: typeof DUMMY_CALENDAR_TRANSACTIONS) {
   return items.reduce((sum, tx) => sum + tx.amount, 0);
@@ -149,19 +147,19 @@ export default function Analysis() {
   const restPercent = totalSpend > 0 ? Math.round((restAmount / totalSpend) * 100) : 0;
 
   const donutGradient = useMemo(() => {
-    if (categoryBreakdown.length === 0) return `${DONUT_COLORS[3]} 0% 100%`;
+    if (categoryBreakdown.length === 0) return `#ececec 0% 100%`;
     let cumulative = 0;
-    const stops = top3.map(({ percent }, idx) => {
+    const stops = top3.map(({ category, percent }) => {
       const from = cumulative;
       cumulative += percent;
-      return `${DONUT_COLORS[idx]} ${from}% ${cumulative}%`;
+      return `${CATEGORY_COLORS[category] ?? '#ccc'} ${from}% ${cumulative}%`;
     });
     if (restPercent > 0) {
       const from = cumulative;
       cumulative += restPercent;
-      stops.push(`${DONUT_COLORS[3]} ${from}% ${cumulative}%`);
+      stops.push(`#ececec ${from}% ${cumulative}%`);
     }
-    if (cumulative < 100) stops.push(`${DONUT_COLORS[3]} ${cumulative}% 100%`);
+    if (cumulative < 100) stops.push(`#ececec ${cumulative}% 100%`);
     return stops.join(', ');
   }, [categoryBreakdown, top3, restPercent]);
 
@@ -304,20 +302,23 @@ export default function Analysis() {
             <EmptyText>이 달의 소비 내역이 없어요.</EmptyText>
           ) : (
             <LegendList>
-              {top3.map(({ category, percent }, idx) => (
+              {top3.map(({ category, percent }) => (
                 <LegendRow
                   key={category}
                   type="button"
-                  onClick={() => navigate(`/analysis/categories/${encodeURIComponent(category)}?month=${spendMonthKey}`)}
+                  onClick={() => {
+                    const from = encodeURIComponent('/analysis');
+                    navigate(`/analysis/categories/${encodeURIComponent(category)}?month=${spendMonthKey}&from=${from}`);
+                  }}
                 >
-                  <LegendDot style={{ background: DONUT_COLORS[idx] }} />
+                  <LegendDot style={{ background: CATEGORY_COLORS[category] ?? '#ccc' }} />
                   <LegendName>{category}</LegendName>
                   <LegendPercent>{percent}%</LegendPercent>
                 </LegendRow>
               ))}
               {rest.length > 0 && (
                 <LegendRow type="button" onClick={() => navigate(`/analysis/categories?month=${spendMonthKey}`)}>
-                  <LegendDot style={{ background: DONUT_COLORS[3] }} />
+                  <LegendDot style={{ background: '#ececec' }} />
                   <LegendName>그 외 {rest.length}개</LegendName>
                   <LegendPercent>{restPercent}%</LegendPercent>
                 </LegendRow>
@@ -356,7 +357,7 @@ export default function Analysis() {
                   <HeatmapCellWrap key={dayIdx}>
                     <HeatmapCell
                       style={{
-                        background: interpolateColor(DONUT_COLORS[3], '#4035B0', intensity),
+                        background: interpolateColor('#E2DEFF', '#4035B0', intensity),
                       }}
                     />
                   </HeatmapCellWrap>
