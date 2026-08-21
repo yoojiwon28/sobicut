@@ -5,8 +5,10 @@ import { PageWrap } from '../../styles/auth.styles';
 import { DUMMY_SATISFACTION_RECORDS, DUMMY_WEEKLY_SATISFACTION } from '../../mocks/satisfaction';
 import { CATEGORY_ICONS } from '../../utils/category';
 import { addMonths, formatMonthLabel, getMonthKey } from '../../utils/date';
+import angleLeftIcon from '../../assets/images/angle_left.svg';
+import angleRightIcon from '../../assets/images/angle_right.svg';
 
-const CHART_H = 140;
+const CHART_H = 170;
 
 function formatMonthDayKorean(dateStr: string) {
   const d = new Date(dateStr);
@@ -40,25 +42,26 @@ export default function SatisfactionResult() {
 
         <MonthHeader>
           <ArrowButton type="button" onClick={() => setMonth((m) => addMonths(m, -1))}>
-            &lt;
+            <img src={angleLeftIcon} alt="이전 달" width={20} height={20} />
           </ArrowButton>
           <MonthLabel>{formatMonthLabel(month)}</MonthLabel>
           <ArrowButton type="button" onClick={() => setMonth((m) => addMonths(m, 1))}>
-            &gt;
+            <img src={angleRightIcon} alt="다음 달" width={20} height={20} />
           </ArrowButton>
         </MonthHeader>
 
         <MonthDivider />
 
-        {records.length === 0 ? (
-          <EmptyText>이번 달 만족도 기록이 없어요</EmptyText>
-        ) : (
-          <List>
-            {records.map((r) => (
-              <Card key={r.id}>
+        <ResultBody>
+          {records.length === 0 ? (
+            <EmptyText>이번 달 만족도 기록이 없어요</EmptyText>
+          ) : (
+            <List>
+              {records.map((r) => (
+                <Card key={r.id}>
                 <CardTop>
                   <MerchantInfo>
-                    <img src={CATEGORY_ICONS[r.category]} alt="" width={24} height={24} />
+                    <CategoryIcon src={CATEGORY_ICONS[r.category]} alt="" width={26} height={26} />
                     <MerchantName>{r.merchant}</MerchantName>
                   </MerchantInfo>
                   <AmountInfo>
@@ -79,15 +82,17 @@ export default function SatisfactionResult() {
                   </ScoreValue>
                 </ScoreSection>
               </Card>
-            ))}
-          </List>
-        )}
+              ))}
+            </List>
+          )}
 
-        <ChartTitle>주차별 평균 만족도</ChartTitle>
-        <ChartWrap>
+          <ChartWrap>
           <YAxis>
             {[5, 4, 3, 2, 1].map((v) => (
-              <YTick key={v}>{v}</YTick>
+              <YTick key={v}>
+                {v}
+                <YTickLine />
+              </YTick>
             ))}
           </YAxis>
           <ChartArea>
@@ -106,7 +111,8 @@ export default function SatisfactionResult() {
               ))}
             </Bars>
           </ChartArea>
-        </ChartWrap>
+          </ChartWrap>
+        </ResultBody>
       </Content>
     </PageWrap>
   );
@@ -117,46 +123,50 @@ const Content = styled.div`
 `;
 
 const Title = styled.h1`
-  font-size: 17px;
-  font-weight: 700;
+  font-size: 24px;
+  font-weight: 800;
   text-align: center;
-  margin: 4px 0 20px;
+  margin: 12px 0 22px;
 `;
 
 const MonthHeader = styled.div`
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 20px;
-  margin-bottom: 20px;
+  justify-content: space-between;
+  margin-bottom: 22px;
 `;
 
 const ArrowButton = styled.button`
+  display: flex;
+  align-items: center;
+  justify-content: center;
   border: none;
   background: none;
-  font-size: 16px;
-  font-weight: 700;
-  color: #999;
   cursor: pointer;
   padding: 4px 8px;
+  opacity: 0.6;
 `;
 
 const MonthLabel = styled.div`
-  font-size: 15px;
-  font-weight: 700;
+  font-size: 18px;
+  font-weight: 800;
 `;
 
 const MonthDivider = styled.hr`
   border: none;
   border-top: 1px solid #e0e0e0;
-  margin: 0 0 20px;
+  margin: 0 0 28px;
+`;
+
+const ResultBody = styled.div`
+  margin: 0 16px;
 `;
 
 const List = styled.div`
   > * + * {
-    margin-top: 16px;
-    padding-top: 16px;
-    border-top: 1px solid #eee;
+    margin-top: 22px;
+    padding-top: 22px;
+    border-top: 1px solid #e8e8e8;
   }
 `;
 
@@ -166,7 +176,7 @@ const CardTop = styled.div`
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  margin-bottom: 12px;
+  margin-bottom: 14px;
 `;
 
 const MerchantInfo = styled.div`
@@ -177,9 +187,13 @@ const MerchantInfo = styled.div`
   min-width: 0;
 `;
 
+const CategoryIcon = styled.img`
+  filter: grayscale(1) opacity(0.85);
+`;
+
 const MerchantName = styled.div`
-  font-size: 18px;
-  font-weight: 700;
+  font-size: 22px;
+  font-weight: 800;
 `;
 
 const AmountInfo = styled.div`
@@ -190,14 +204,14 @@ const AmountInfo = styled.div`
 `;
 
 const CardAmount = styled.div`
-  font-size: 20px;
-  font-weight: 700;
+  font-size: 22px;
+  font-weight: 800;
 `;
 
 const CardDate = styled.div`
-  font-size: 11px;
+  font-size: 14px;
   color: #999;
-  margin-top: 2px;
+  margin-top: 4px;
 `;
 
 const ScoreSection = styled.div`
@@ -205,42 +219,37 @@ const ScoreSection = styled.div`
   grid-template-columns: 1fr auto 1fr;
   align-items: center;
   justify-items: center;
-  column-gap: 16px;
-  row-gap: 6px;
-  width: fit-content;
-  margin: 0 auto;
+  column-gap: 24px;
+  row-gap: 10px;
+  width: 100%;
 `;
 
 const Pill = styled.span`
   display: inline-block;
   background: #fff;
-  border: 1px solid #d9d9d9;
-  border-radius: 999px;
-  padding: 3px 12px;
-  font-size: 11px;
-  color: #666;
+  border: 1.5px solid #cfcfcf;
+  border-radius: 8px;
+  padding: 8px 18px;
+  font-size: 15px;
+  font-weight: 500;
+  color: #222;
 `;
 
 const ScoreValue = styled.div<{ $color: string }>`
-  font-size: 26px;
+  font-size: 30px;
   font-weight: 800;
   color: ${({ $color }) => $color};
 `;
 
 const ArrowIcon = styled.span`
-  color: #ccc;
-  font-size: 12px;
-`;
-
-const ChartTitle = styled.div`
-  font-size: 14px;
-  font-weight: 700;
-  margin: 32px 0 16px;
+  color: #bbb;
+  font-size: 16px;
 `;
 
 const ChartWrap = styled.div`
   display: flex;
-  gap: 10px;
+  gap: 8px;
+  margin-top: 32px;
 `;
 
 const YAxis = styled.div`
@@ -252,9 +261,17 @@ const YAxis = styled.div`
 `;
 
 const YTick = styled.div`
-  font-size: 10px;
-  color: #999;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  color: #888;
   transform: translateY(-50%);
+`;
+
+const YTickLine = styled.span`
+  width: 8px;
+  border-top: 1px solid #ddd;
 `;
 
 const ChartArea = styled.div`
@@ -273,7 +290,7 @@ const Baseline = styled.div`
 const Bars = styled.div`
   display: flex;
   align-items: flex-end;
-  gap: 8px;
+  gap: 14px;
   height: ${CHART_H}px;
 `;
 
@@ -294,7 +311,7 @@ const BarTrack = styled.div`
 `;
 
 const Bar = styled.div<{ $color: string }>`
-  width: 48px;
+  width: 42px;
   border-radius: 6px 6px 0 0;
   background: ${({ $color }) => $color};
 `;
@@ -302,8 +319,8 @@ const Bar = styled.div<{ $color: string }>`
 const BarLabel = styled.div`
   height: 27px;
   padding-top: 8px;
-  font-size: 11px;
-  color: #888;
+  font-size: 13px;
+  color: #666;
   text-align: center;
 `;
 
