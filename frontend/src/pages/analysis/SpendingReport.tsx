@@ -197,6 +197,12 @@ export default function SpendingReport() {
             ))}
           </ChartBars>
         </ChartWrap>
+
+        <SatisfactionButtonWrap>
+          <SatisfactionButton type="button" onClick={() => navigate('/satisfaction/result')}>
+            내 소비 만족도 보러 가기 →
+          </SatisfactionButton>
+        </SatisfactionButtonWrap>
       </Section>
     </PageWrap>
   );
@@ -311,6 +317,28 @@ const WalletStatusRow = styled.div`
 
   strong {
     font-weight: 700;
+  }
+`;
+
+const SatisfactionButtonWrap = styled.div`
+  display: flex;
+  justify-content: center;
+  margin-top: 20px;
+`;
+
+const SatisfactionButton = styled.button`
+  display: inline-block;
+  padding: 8px 18px;
+  border: none;
+  border-radius: 999px;
+  background: #efe9fe;
+  color: #6c3ef4;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+
+  &:active {
+    opacity: 0.8;
   }
 `;
 
