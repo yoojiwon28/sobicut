@@ -9,16 +9,28 @@ import { CATEGORY_COLORS } from '../utils/category';
 import editIcon from '../assets/images/edit_icon.svg';
 import angleRightIcon from '../assets/images/angle_right.svg';
 import angleLeftIcon from '../assets/images/angle_left.svg';
-import walletIcon from '../assets/images/wallet.svg';
 import impulseIcon from '../assets/images/impulse.svg';
 import cartIcon from '../assets/images/cart.svg';
+import { WALLET_GAUGE_COLORS, getWalletLevelIndex } from '../utils/wallet';
 
 // GET /reports/scores 더미데이터
 const DUMMY_SCORES = {
   wallet_temperature: 72,
+  wallet_level: '임계',
   impulse_score: 67,
   bpti: 'FIRE',
 };
+
+function WalletIcon({ color }: { color: string }) {
+  return (
+    <svg width="33" height="26" viewBox="0 0 33 26" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path
+        d="M0 3.25C0 1.4625 1.485 0 3.3 0H28.05C28.4876 0 28.9073 0.171205 29.2167 0.475951C29.5262 0.780698 29.7 1.19402 29.7 1.625V3.25H3.3V4.875H31.35C31.7876 4.875 32.2073 5.04621 32.5167 5.35095C32.8262 5.6557 33 6.06902 33 6.5V22.75C33 23.612 32.6523 24.4386 32.0335 25.0481C31.4146 25.6576 30.5752 26 29.7 26H3.3C2.42479 26 1.58542 25.6576 0.966548 25.0481C0.347678 24.4386 0 23.612 0 22.75V3.25ZM27.225 17.875C27.8814 17.875 28.5109 17.6182 28.9751 17.1611C29.4392 16.704 29.7 16.084 29.7 15.4375C29.7 14.791 29.4392 14.171 28.9751 13.7139C28.5109 13.2568 27.8814 13 27.225 13C26.5686 13 25.9391 13.2568 25.4749 13.7139C25.0108 14.171 24.75 14.791 24.75 15.4375C24.75 16.084 25.0108 16.704 25.4749 17.1611C25.9391 17.6182 26.5686 17.875 27.225 17.875Z"
+        fill={color}
+      />
+    </svg>
+  );
+}
 
 const WEEKDAYS = ['월', '화', '수', '목', '금', '토', '일'];
 
@@ -87,6 +99,8 @@ export default function Analysis() {
   const navigate = useNavigate();
   const [budgetMonth, setBudgetMonth] = useState(() => new Date());
   const [spendMonth, setSpendMonth] = useState(() => new Date());
+
+  const walletLevelIndex = getWalletLevelIndex(DUMMY_SCORES.wallet_level);
 
   const { start: weekStart, end: weekEnd } = getWeekRange(TODAY);
 
@@ -215,8 +229,10 @@ export default function Analysis() {
       <StatRow>
         <StatCard>
           <StatLabel>지갑 온도</StatLabel>
-          <StatIcon src={walletIcon} alt="" width={33} height={26} />
-          <StatValue $color="#FF4040">{DUMMY_SCORES.wallet_temperature}°C</StatValue>
+          <IconWrap>
+            <WalletIcon color={WALLET_GAUGE_COLORS[walletLevelIndex]} />
+          </IconWrap>
+          <StatValue $color={WALLET_GAUGE_COLORS[walletLevelIndex]}>{DUMMY_SCORES.wallet_temperature}°C</StatValue>
         </StatCard>
         <StatCard>
           <StatLabel>충동 지수</StatLabel>
@@ -454,6 +470,14 @@ const StatIcon = styled.img`
   display: block;
   height: 26px;
   width: auto;
+  margin: 0 auto 2px;
+`;
+
+const IconWrap = styled.div`
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   margin: 0 auto 2px;
 `;
 
