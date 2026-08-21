@@ -5,7 +5,7 @@ import BackButton from '../../components/BackButton';
 import ScoreBar from '../../components/ScoreBar';
 import RadarChart from '../../components/RadarChart';
 import { PageWrap } from '../../styles/auth.styles';
-import { WALLET_IMAGES, getWalletLevelIndex } from '../../utils/wallet';
+import { WALLET_IMAGES, WALLET_GAUGE_COLORS, getWalletLevelIndex } from '../../utils/wallet';
 
 // GET /reports/impulse 더미데이터
 const DUMMY_IMPULSE = {
@@ -120,7 +120,7 @@ export default function SpendingReport() {
         <Headline>
           나의 지갑 온도는
           <br />
-          <WalletTempStrong>{DUMMY_WALLET.myTemp}°C</WalletTempStrong> !
+          <WalletTempStrong $color={WALLET_GAUGE_COLORS[walletLevelIndex]}>{DUMMY_WALLET.myTemp}°C</WalletTempStrong> !
         </Headline>
         <SubText>
           나와 비슷한 친구들 평균({DUMMY_WALLET.peerAvgTemp}°C)보다 {Math.abs(walletDiff)}°C 더{' '}
@@ -140,6 +140,7 @@ export default function SpendingReport() {
             markerValue={DUMMY_WALLET.peerAvgTemp}
             markerLabel="또래 평균 온도"
             markerValueLabel={`${DUMMY_WALLET.peerAvgTemp}°C`}
+            color={WALLET_GAUGE_COLORS[walletLevelIndex]}
           />
         </BarWrap>
 
@@ -250,10 +251,10 @@ const ImpulseStrong = styled.strong`
   font-weight: 800;
 `;
 
-const WalletTempStrong = styled.strong`
+const WalletTempStrong = styled.strong<{ $color: string }>`
   font-size: 32px;
   font-weight: 800;
-  color: #ff7d7d;
+  color: ${({ $color }) => $color};
 `;
 
 const SubText = styled.p`
