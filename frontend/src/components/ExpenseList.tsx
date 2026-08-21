@@ -2,6 +2,7 @@ import styled, { css } from 'styled-components';
 import { CATEGORY_ICONS } from '../utils/category';
 import type { Transaction } from '../types/transaction';
 import angleRightIcon from '../assets/images/angle_right.svg';
+import incomeIcon from '../assets/images/income_icon.svg';
 
 type ExpenseListProps = {
   items: Transaction[];
@@ -30,8 +31,12 @@ export default function ExpenseList({
           disabled={!onRowClick}
         >
           <ItemIcon>
-            {CATEGORY_ICONS[tx.category] && (
-              <img src={CATEGORY_ICONS[tx.category]} alt={tx.category} width={22} height={22} />
+            {tx.type === 'income' ? (
+                <img src={incomeIcon} alt="수입" width={22} height={22} />
+            ) : (
+                CATEGORY_ICONS[tx.category] && (
+                <img src={CATEGORY_ICONS[tx.category]} alt={tx.category} width={22} height={22} />
+                )
             )}
           </ItemIcon>
           <ItemInfo>

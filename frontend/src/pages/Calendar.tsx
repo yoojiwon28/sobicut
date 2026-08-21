@@ -111,8 +111,12 @@ export default function CalendarPage() {
           dayItems.map((tx) => (
             <ExpenseRow key={tx.id}>
               <ItemIcon>
-                {CATEGORY_ICONS[tx.category] && (
-                  <img src={CATEGORY_ICONS[tx.category]} alt={tx.category} width={22} height={22} />
+                {tx.type === 'income' ? (
+                  <img src={incomeIcon} alt="수입" width={22} height={22} />
+                ) : (
+                  CATEGORY_ICONS[tx.category] && (
+                    <img src={CATEGORY_ICONS[tx.category]} alt={tx.category} width={22} height={22} />
+                  )
                 )}
               </ItemIcon>
               <ItemInfo>
