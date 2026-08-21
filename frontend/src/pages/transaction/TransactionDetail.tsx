@@ -1,14 +1,12 @@
-import { useRef, useState } from 'react';
-import { useParams, useSearchParams } from 'react-router-dom';
+import { useState } from 'react';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import styled from 'styled-components';
 import BackButton from '../../components/BackButton';
 import DateTimePickerField from '../../components/DateTimePickerField';
 import { AuthTitle } from '../../styles/auth.styles';
-import { FieldGroup, FieldLabel, OutlinedInput, OutlinedSelect, OutlinedTextarea, IconFieldWrap } from '../../styles/field.styles';
+import { FieldGroup, FieldLabel, OutlinedInput, OutlinedSelect, OutlinedTextarea } from '../../styles/field.styles';
 import { DUMMY_ALL_TRANSACTIONS, DUMMY_TODAY_EXPENSES } from '../../mocks/transactions';
 import { CATEGORY_ICONS, CATEGORY_OPTIONS } from '../../utils/category';
-import editIcon from '../../assets/images/edit_icon.svg';
-import checkIcon from '../../assets/images/check_icon.svg';
 import incomeIcon from '../../assets/images/income_icon.svg';
 import expenseIcon from '../../assets/images/expense_icon.svg';
 import angleRightIcon from '../../assets/images/angle_right.svg';
@@ -16,6 +14,7 @@ import angleRightIcon from '../../assets/images/angle_right.svg';
 export default function TransactionDetail() {
   const { id } = useParams<{ id: string }>();
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const tx = DUMMY_ALL_TRANSACTIONS.find((t) => String(t.id) === id);
 
   const [merchant, setMerchant] = useState(tx?.merchant ?? '');
@@ -23,9 +22,6 @@ export default function TransactionDetail() {
   const [memo, setMemo] = useState(tx?.description ?? '');
   const [date, setDate] = useState(tx?.transaction_date ?? '');
   const [time, setTime] = useState(tx?.transaction_time ?? '');
-
-  const [isEditingMerchant, setIsEditingMerchant] = useState(false);
-  const merchantInputRef = useRef<HTMLInputElement>(null);
 
   if (!tx) {
     return (
@@ -44,25 +40,23 @@ export default function TransactionDetail() {
       ? '/expenses/today'
       : `/day/${tx.transaction_date}`;
 
-  // TODO: PATCH /transactions/:id 로 교체
-  const handleMerchantIconClick = () => {
-    if (isEditingMerchant) {
-      console.log(`PATCH /transactions/${tx.id}`, { merchant });
-      setIsEditingMerchant(false);
-    } else {
-      setIsEditingMerchant(true);
-      requestAnimationFrame(() => merchantInputRef.current?.focus());
-    }
-  };
-  const handleCategoryChange = (value: string) => {
-    setCategory(value);
-    console.log(`PATCH /transactions/${tx.id}`, { category: value });
-  };
-  const handleMemoBlur = () => {
-    console.log(`PATCH /transactions/${tx.id}`, { description: memo });
-  };
-  const handleDateConfirm = () => {
-    console.log(`PATCH /transactions/${tx.id}`, { transaction_date: date, transaction_time: time });
+  const isDirty =
+    merchant !== (tx.merchant ?? '') ||
+    category !== (tx.category ?? '') ||
+    memo !== (tx.description ?? '') ||
+    date !== (tx.transaction_date ?? '') ||
+    time !== (tx.transaction_time ?? '');
+
+  const handleSubmit = () => {
+    // TODO: updateTransaction API 연동
+    console.log(`PATCH /transactions/${tx.id}`, {
+      merchant,
+      category,
+      description: memo,
+      transaction_date: date,
+      transaction_time: time,
+    });
+    navigate(backTo);
   };
 
   return (
@@ -85,24 +79,7 @@ export default function TransactionDetail() {
 
       <FieldGroup>
         <FieldLabel>결제처</FieldLabel>
-        <IconFieldWrap>
-          <OutlinedInput
-            ref={merchantInputRef}
-            value={merchant}
-            onChange={(e) => setMerchant(e.target.value)}
-            readOnly={!isEditingMerchant}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') handleMerchantIconClick();
-            }}
-          />
-          <button
-            type="button"
-            aria-label={isEditingMerchant ? '결제처 저장' : '결제처 수정'}
-            onClick={handleMerchantIconClick}
-          >
-            <img src={isEditingMerchant ? checkIcon : editIcon} alt="" width={18} height={18} />
-          </button>
-        </IconFieldWrap>
+        <OutlinedInput value={merchant} onChange={(e) => setMerchant(e.target.value)} />
       </FieldGroup>
 
       <FieldGroup>
@@ -114,14 +91,13 @@ export default function TransactionDetail() {
             setDate(d);
             setTime(t);
           }}
-          onConfirm={handleDateConfirm}
         />
       </FieldGroup>
 
       <FieldGroup>
         <FieldLabel>카테고리</FieldLabel>
         <SelectFieldWrap>
-          <OutlinedSelect value={category} onChange={(e) => handleCategoryChange(e.target.value)}>
+          <OutlinedSelect value={category} onChange={(e) => setCategory(e.target.value)}>
             {CATEGORY_OPTIONS.map((option) => (
               <option key={option} value={option}>
                 {option}
@@ -138,9 +114,12 @@ export default function TransactionDetail() {
           placeholder="메모를 작성해주세요"
           value={memo}
           onChange={(e) => setMemo(e.target.value)}
-          onBlur={handleMemoBlur}
         />
       </FieldGroup>
+
+      <SubmitButton type="button" disabled={!isDirty} onClick={handleSubmit}>
+        수정 완료
+      </SubmitButton>
     </Page>
   );
 }
@@ -181,4 +160,23 @@ const EmptyText = styled.p`
   color: #999;
   font-size: 13px;
   padding: 40px 0;
+`;
+
+const SubmitButton = styled.button`
+  width: 100%;
+  margin-top: 24px;
+  padding: 14px 0;
+  border: none;
+  border-radius: 12px;
+  background: #7c4dff;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+
+  &:disabled {
+    background: #e0e0e0;
+    color: #999;
+    cursor: not-allowed;
+  }
 `;
