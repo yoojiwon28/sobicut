@@ -8,6 +8,9 @@ import { getMonthKey, formatMonthLabel, addMonths, getWeekRange, toDateKey } fro
 import editIcon from '../assets/images/edit_icon.svg';
 import angleRightIcon from '../assets/images/angle_right.svg';
 import angleLeftIcon from '../assets/images/angle_left.svg';
+import walletIcon from '../assets/images/wallet.svg';
+import impulseIcon from '../assets/images/impulse.svg';
+import cartIcon from '../assets/images/cart.svg';
 
 // GET /reports/scores 더미데이터
 const DUMMY_SCORES = {
@@ -189,17 +192,17 @@ export default function Analysis() {
       <StatRow>
         <StatCard>
           <StatLabel>지갑 온도</StatLabel>
-          <StatIcon>💳</StatIcon>
+          <StatIcon src={walletIcon} alt="" width={33} height={26} />
           <StatValue>{DUMMY_SCORES.wallet_temperature}°C</StatValue>
         </StatCard>
         <StatCard>
           <StatLabel>충동 지수</StatLabel>
-          <StatIcon>⚡</StatIcon>
+          <StatIcon src={impulseIcon} alt="" width={19} height={26} />
           <StatValue>{DUMMY_SCORES.impulse_score}점</StatValue>
         </StatCard>
         <StatCard>
           <StatLabel>BPTI</StatLabel>
-          <StatIcon>🛒</StatIcon>
+          <StatIcon src={cartIcon} alt="" width={26} height={26} />
           <StatValue>{DUMMY_SCORES.bpti}</StatValue>
         </StatCard>
       </StatRow>
@@ -400,9 +403,11 @@ const StatLabel = styled.div`
   margin-bottom: 4px;
 `;
 
-const StatIcon = styled.div`
-  font-size: 18px;
-  margin-bottom: 2px;
+const StatIcon = styled.img`
+  display: block;
+  height: 26px;
+  width: auto;
+  margin: 0 auto 2px;
 `;
 
 const StatValue = styled.div`
