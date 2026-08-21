@@ -39,31 +39,41 @@ export default function ImpulseReport() {
           max={100}
           markerValue={DUMMY_IMPULSE.peerAverage}
           markerLabel="또래 평균 점수"
+          markerValueLabel={`${DUMMY_IMPULSE.peerAverage}점`}
         />
       </BarWrap>
 
-      <SectionTitle>점수에 영향을 준 정보예요</SectionTitle>
+      <Card>
+        <SectionTitle>점수에 영향을 준 정보예요</SectionTitle>
 
-      <FactorGroupTitle>📈 점수를 높인 요인 (부정적 습관)</FactorGroupTitle>
-      <FactorList>
-        {DUMMY_FACTORS.negative.map((factor) => (
-          <FactorRow key={factor}>{factor}</FactorRow>
-        ))}
-      </FactorList>
+        <FactorGroupTitle>📈 점수를 높인 요인 (부정적 습관)</FactorGroupTitle>
+        <FactorList>
+          {DUMMY_FACTORS.negative.map((factor) => (
+            <FactorRow key={factor}>{factor}</FactorRow>
+          ))}
+        </FactorList>
 
-      <FactorGroupTitle>📉 점수를 낮춘 요인 (긍정적 습관)</FactorGroupTitle>
-      <FactorList>
-        {DUMMY_FACTORS.positive.map((factor) => (
-          <FactorRow key={factor}>{factor}</FactorRow>
-        ))}
-      </FactorList>
+        <FactorGroupTitle>📉 점수를 낮춘 요인 (긍정적 습관)</FactorGroupTitle>
+        <FactorList>
+          {DUMMY_FACTORS.positive.map((factor) => (
+            <FactorRow key={factor} $positive>
+              {factor}
+            </FactorRow>
+          ))}
+        </FactorList>
+      </Card>
 
-      <SectionTitle>이번 주 맞춤 처방전</SectionTitle>
-      <PrescriptionList>
-        {DUMMY_PRESCRIPTIONS.map((item) => (
-          <PrescriptionItem key={item}>{item}</PrescriptionItem>
-        ))}
-      </PrescriptionList>
+      <Card>
+        <PrescriptionSectionTitle>이번 주 맞춤 처방전</PrescriptionSectionTitle>
+        <PrescriptionList>
+          {DUMMY_PRESCRIPTIONS.map((item, i) => (
+            <PrescriptionRow key={item}>
+              <PrescriptionBadge>{i + 1}</PrescriptionBadge>
+              <PrescriptionText>{item}</PrescriptionText>
+            </PrescriptionRow>
+          ))}
+        </PrescriptionList>
+      </Card>
     </PageWrap>
   );
 }
@@ -75,51 +85,95 @@ const Headline = styled.h1`
   margin: 4px 0 6px;
 
   strong {
-    font-size: 22px;
+    font-size: 34px;
     font-weight: 800;
   }
 `;
 
 const BarWrap = styled.div`
-  margin-bottom: 28px;
+  margin-bottom: 34px;
+`;
+
+const Card = styled.div`
+  background: #fff;
+  border-radius: 16px;
+  padding: 20px 18px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
+
+  & + & {
+    margin-top: 14px;
+  }
 `;
 
 const SectionTitle = styled.h2`
-  font-size: 15px;
-  font-weight: 700;
+  font-size: 12px;
+  font-weight: 500;
+  color: #888;
+  margin: 0 0 14px;
+`;
+
+const PrescriptionSectionTitle = styled.h2`
+  font-size: 17px;
+  font-weight: 800;
+  color: #222;
   margin: 0 0 14px;
 `;
 
 const FactorGroupTitle = styled.div`
-  font-size: 13px;
-  font-weight: 700;
-  color: #444;
-  margin-bottom: 8px;
+  font-size: 15px;
+  font-weight: 800;
+  color: #222;
+  margin: 14px 0 10px;
 `;
 
 const FactorList = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
   margin-bottom: 20px;
 `;
 
-const FactorRow = styled.div`
-  background: #f6f6f6;
-  border-radius: 10px;
-  padding: 12px 14px;
-  font-size: 13px;
-  color: #444;
+const FactorRow = styled.div<{ $positive?: boolean }>`
+  display: inline-block;
+  width: auto;
+  border-radius: 999px;
+  padding: 10px 16px;
+  font-size: 15px;
+  font-weight: 700;
+  background: ${({ $positive }) => ($positive ? '#E2DEFF' : '#FFE8E8')};
+  color: ${({ $positive }) => ($positive ? '#6A5CE6' : '#FF4040')};
+`;
+
+const PrescriptionList = styled.div`
+  margin: 0 0 4px;
+`;
+
+const PrescriptionRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 0;
 
   & + & {
-    margin-top: 8px;
+    border-top: 1px solid #f0f0f0;
   }
 `;
 
-const PrescriptionList = styled.ul`
-  margin: 0 0 16px;
-  padding-left: 18px;
+const PrescriptionBadge = styled.div`
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  background: #edeafb;
+  color: #6a5ce6;
+  font-size: 14px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
 `;
 
-const PrescriptionItem = styled.li`
-  font-size: 13px;
-  color: #444;
-  line-height: 1.8;
+const PrescriptionText = styled.div`
+  font-size: 15px;
+  color: #333;
 `;
