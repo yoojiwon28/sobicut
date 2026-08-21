@@ -249,7 +249,11 @@ export default function Analysis() {
       <Card>
         <BudgetSectionHeader>
           <BudgetSectionTitle>나의 예산 현황</BudgetSectionTitle>
-          <EditButton type="button" onClick={() => navigate('/budget')} aria-label="예산 설정">
+          <EditButton
+            type="button"
+            onClick={() => navigate(`/budget?from=${encodeURIComponent('/analysis')}`)}
+            aria-label="예산 설정"
+          >
             <img src={editIcon} alt="" width={18} height={18} />
           </EditButton>
         </BudgetSectionHeader>

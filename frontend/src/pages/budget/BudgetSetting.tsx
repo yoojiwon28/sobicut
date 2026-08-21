@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import styled from 'styled-components';
 import BackButton from '../../components/BackButton';
 import { AuthTitle, FormColumn, ButtonPrimary, Field, Label } from '../../styles/auth.styles';
@@ -12,6 +12,9 @@ const WEEK_ROUND = 1000;
 
 export default function BudgetSetting() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const fromParam = searchParams.get('from');
+  const backTo = fromParam ? decodeURIComponent(fromParam) : '/mypage';
   const [total, setTotal] = useState(DUMMY_BUDGET.total);
   const [distribution, setDistribution] = useState<BudgetDistribution>(DUMMY_BUDGET.distribution);
 
@@ -20,7 +23,7 @@ export default function BudgetSetting() {
 
   const handleSelectCustom = () => {
     setDistribution('custom');
-    navigate('/budget/weekly', { state: { total } });
+    navigate('/budget/weekly', { state: { total, backTo } });
   };
 
   const handleSubmit = (e: FormEvent) => {
@@ -28,31 +31,34 @@ export default function BudgetSetting() {
     if (distribution === 'custom') return;
     // TODO: PATCH /budget { total, distribution: 'equal' }
     console.log('PATCH /budget', { total, distribution: 'equal' });
-    navigate('/mypage');
+    navigate(backTo);
   };
 
   return (
     <form onSubmit={handleSubmit}>
       <FormColumn>
         <div>
-          <BackButton to="/mypage" />
+          <BackButton to={backTo} />
           <AuthTitle $size={20}>예산 설정</AuthTitle>
+          <TitleDivider />
 
           <Field>
             <Label>나의 이번 달 총 예산</Label>
-            <TotalDisplay>{total.toLocaleString()}원</TotalDisplay>
-            <Slider
-              type="range"
-              min={0}
-              max={TOTAL_MAX}
-              step={TOTAL_STEP}
-              value={total}
-              onChange={(e) => setTotal(Number(e.target.value))}
-              style={{
-                background: `linear-gradient(to right, #6a5ce6 ${totalPercent}%, #ececec ${totalPercent}%)`,
-              }}
-            />
-            <SliderValue>{total.toLocaleString()}원</SliderValue>
+            <TotalDisplay>{total.toLocaleString()} 원</TotalDisplay>
+            <SliderWrap>
+              <SliderValue style={{ left: `calc(${totalPercent}%)` }}>{total.toLocaleString()}원</SliderValue>
+              <Slider
+                type="range"
+                min={0}
+                max={TOTAL_MAX}
+                step={TOTAL_STEP}
+                value={total}
+                onChange={(e) => setTotal(Number(e.target.value))}
+                style={{
+                  background: `linear-gradient(to right, #C0B8FF ${totalPercent}%, #E9E9E9 ${totalPercent}%)`,
+                }}
+              />
+            </SliderWrap>
             <PeerText>나의 또래 친구들은 평균 {DUMMY_BUDGET.peerAverage.toLocaleString()}원으로 설정했어요</PeerText>
           </Field>
 
@@ -82,19 +88,30 @@ export default function BudgetSetting() {
   );
 }
 
+const TitleDivider = styled.div`
+  border-bottom: 1px solid #edeafb;
+  margin: 0 0 24px;
+  padding-bottom: 14px;
+`;
+
 const TotalDisplay = styled.div`
-  font-size: 24px;
+  font-size: 26px;
   font-weight: 800;
   text-align: right;
-  background: #f4f2fc;
-  border-radius: 12px;
-  padding: 14px 16px;
+  background: #fff;
+  border: 2px solid #6a5ce6;
+  border-radius: 10px;
+  padding: 22px 20px;
+`;
+
+const SliderWrap = styled.div`
+  position: relative;
+  margin-top: 24px;
 `;
 
 const Slider = styled.input`
   width: 100%;
-  margin-top: 12px;
-  height: 8px;
+  height: 12px;
   border-radius: 999px;
   border: none;
   outline: none;
@@ -103,13 +120,13 @@ const Slider = styled.input`
   appearance: none;
 
   &::-webkit-slider-runnable-track {
-    height: 8px;
+    height: 12px;
     border-radius: 999px;
     border: none;
   }
 
   &::-moz-range-track {
-    height: 8px;
+    height: 12px;
     border-radius: 999px;
     border: none;
     background: transparent;
@@ -118,8 +135,8 @@ const Slider = styled.input`
   &::-webkit-slider-thumb {
     -webkit-appearance: none;
     appearance: none;
-    width: 20px;
-    height: 20px;
+    width: 24px;
+    height: 24px;
     margin-top: -6px;
     border-radius: 50%;
     border: none;
@@ -128,8 +145,8 @@ const Slider = styled.input`
   }
 
   &::-moz-range-thumb {
-    width: 20px;
-    height: 20px;
+    width: 24px;
+    height: 24px;
     border-radius: 50%;
     border: none;
     background: #6a5ce6;
@@ -138,15 +155,21 @@ const Slider = styled.input`
 `;
 
 const SliderValue = styled.div`
-  font-size: 12px;
-  color: #888;
-  margin-top: 2px;
+  position: absolute;
+  top: -22px;
+  transform: translateX(-50%);
+  font-size: 14px;
+  font-weight: 800;
+  color: #222;
+  margin-bottom: 6px;
+  white-space: nowrap;
 `;
 
 const PeerText = styled.p`
-  font-size: 12px;
+  font-size: 13px;
   color: #888;
   margin: 12px 0 0;
+  text-align: right;
 `;
 
 const OptionCard = styled.button<{ $active: boolean }>`
@@ -154,10 +177,10 @@ const OptionCard = styled.button<{ $active: boolean }>`
   display: flex;
   align-items: center;
   gap: 12px;
-  border: 2px solid ${({ $active }) => ($active ? '#6a5ce6' : '#ececec')};
+  border: 1.5px solid ${({ $active }) => ($active ? '#6a5ce6' : '#D9D5F5')};
   border-radius: 12px;
   background: #fff;
-  padding: 14px 16px;
+  padding: 18px 18px;
   cursor: pointer;
   text-align: left;
 
@@ -167,8 +190,8 @@ const OptionCard = styled.button<{ $active: boolean }>`
 `;
 
 const Radio = styled.span<{ $active: boolean }>`
-  width: 18px;
-  height: 18px;
+  width: 20px;
+  height: 20px;
   border-radius: 50%;
   flex-shrink: 0;
   border: 2px solid ${({ $active }) => ($active ? '#6a5ce6' : '#ccc')};
@@ -187,12 +210,12 @@ const Radio = styled.span<{ $active: boolean }>`
 const OptionText = styled.div``;
 
 const OptionTitle = styled.div`
-  font-size: 14px;
+  font-size: 16px;
   font-weight: 700;
 `;
 
 const OptionSub = styled.div`
-  font-size: 12px;
+  font-size: 13px;
   color: #888;
   margin-top: 4px;
 `;

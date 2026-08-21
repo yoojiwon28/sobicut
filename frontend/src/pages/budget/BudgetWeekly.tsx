@@ -13,7 +13,9 @@ const WEEK_STEP = 5000;
 export default function BudgetWeekly() {
   const navigate = useNavigate();
   const location = useLocation();
-  const total = (location.state as { total?: number } | null)?.total ?? DUMMY_BUDGET.total;
+  const state = location.state as { total?: number; backTo?: string } | null;
+  const total = state?.total ?? DUMMY_BUDGET.total;
+  const backTo = state?.backTo ?? '/budget';
 
   const [weeks, setWeeks] = useState<number[]>(() => {
     const base = Math.floor(total / 4 / WEEK_STEP) * WEEK_STEP;
@@ -42,13 +44,14 @@ export default function BudgetWeekly() {
     <form onSubmit={handleSubmit}>
       <FormColumn>
         <div>
-          <BackButton to="/budget" />
+          <BackButton to={backTo} />
           <AuthTitle $size={20}>주차별 예산 직접 설정</AuthTitle>
+          <TitleDivider />
 
           <RemainingBox>
             <RemainingLabel>남은 예산</RemainingLabel>
             <RemainingValue>
-              {remaining.toLocaleString()}/ 총 {total.toLocaleString()}원
+              {remaining.toLocaleString()}/ 총 {total.toLocaleString()} 원
             </RemainingValue>
             <RemainingHint>남은 금액을 모두 배분해야 저장이 가능해요</RemainingHint>
           </RemainingBox>
@@ -56,26 +59,30 @@ export default function BudgetWeekly() {
           {weeks.map((amount, idx) => (
             <WeekField key={idx}>
               <WeekLabel>{idx + 1}주차</WeekLabel>
-              <WeekValueRow>
-                <WeekInput
-                  type="number"
+              <WeekRow>
+                <WeekValueRow>
+                  <WeekBracket>[</WeekBracket>
+                  <WeekInput
+                    type="number"
+                    step={WEEK_STEP}
+                    value={amount}
+                    onChange={(e) => updateWeek(idx, Number(e.target.value))}
+                  />
+                  <WeekBracket>]</WeekBracket>
+                  <WeekUnit>원</WeekUnit>
+                </WeekValueRow>
+                <WeekSlider
+                  type="range"
+                  min={0}
+                  max={total}
                   step={WEEK_STEP}
                   value={amount}
                   onChange={(e) => updateWeek(idx, Number(e.target.value))}
+                  style={{
+                    background: `linear-gradient(to right, #C0B8FF ${total > 0 ? (amount / total) * 100 : 0}%, #C0B8FF ${total > 0 ? (amount / total) * 100 : 0}%)`,
+                  }}
                 />
-                <WeekUnit>원</WeekUnit>
-              </WeekValueRow>
-              <WeekSlider
-                type="range"
-                min={0}
-                max={total}
-                step={WEEK_STEP}
-                value={amount}
-                onChange={(e) => updateWeek(idx, Number(e.target.value))}
-                style={{
-                  background: `linear-gradient(to right, #6a5ce6 ${total > 0 ? (amount / total) * 100 : 0}%, #ececec ${total > 0 ? (amount / total) * 100 : 0}%)`,
-                }}
-              />
+              </WeekRow>
             </WeekField>
           ))}
         </div>
@@ -88,73 +95,97 @@ export default function BudgetWeekly() {
   );
 }
 
+const TitleDivider = styled.div`
+  border-bottom: 1px solid #edeafb;
+  margin: 0 0 24px;
+  padding-bottom: 14px;
+`;
+
 const RemainingBox = styled.div`
-  background: #f4f2fc;
-  border-radius: 12px;
-  padding: 16px 18px;
-  margin-bottom: 24px;
+  margin-bottom: 30px;
 `;
 
 const RemainingLabel = styled.div`
-  font-size: 13px;
-  font-weight: 700;
-  color: #555;
+  font-size: 18px;
+  font-weight: 800;
+  color: #222;
+  text-align: left;
 `;
 
 const RemainingValue = styled.div`
-  font-size: 20px;
+  font-size: 22px;
   font-weight: 800;
-  margin-top: 6px;
+  text-align: right;
+  margin-top: 8px;
 `;
 
 const RemainingHint = styled.div`
-  font-size: 11px;
-  color: #999;
-  margin-top: 6px;
+  font-size: 15px;
+  color: #bbb;
+  margin-top: 10px;
+  text-align: left;
 `;
 
 const WeekField = styled.div`
-  margin-bottom: 20px;
+  margin-bottom: 22px;
 `;
 
 const WeekLabel = styled.div`
-  font-size: 13px;
-  font-weight: 700;
+  font-size: 15px;
+  font-weight: 800;
   margin-bottom: 6px;
+`;
+
+const WeekRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 14px;
 `;
 
 const WeekValueRow = styled.div`
   display: flex;
   align-items: baseline;
-  gap: 4px;
-  margin-bottom: 6px;
+  gap: 2px;
+  flex-shrink: 0;
+`;
+
+const WeekBracket = styled.span`
+  font-size: 20px;
+  font-weight: 800;
+  color: #222;
 `;
 
 const WeekInput = styled.input`
-  width: 100%;
+  width: 110px;
   border: none;
-  border-bottom: 2px solid #ececec;
   background: none;
-  font-size: 18px;
-  font-weight: 700;
+  font-size: 20px;
+  font-weight: 800;
+  text-align: center;
   padding: 4px 0;
   outline: none;
 
-  &:focus {
-    border-color: #6a5ce6;
+  &::-webkit-outer-spin-button,
+  &::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+
+  &[type='number'] {
+    -moz-appearance: textfield;
   }
 `;
 
 const WeekUnit = styled.span`
-  font-size: 14px;
-  font-weight: 700;
-  color: #444;
+  font-size: 20px;
+  font-weight: 800;
+  color: #222;
   flex-shrink: 0;
 `;
 
 const WeekSlider = styled.input`
-  width: 100%;
-  height: 8px;
+  flex: 1;
+  height: 14px;
   border-radius: 999px;
   border: none;
   outline: none;
@@ -163,13 +194,13 @@ const WeekSlider = styled.input`
   appearance: none;
 
   &::-webkit-slider-runnable-track {
-    height: 8px;
+    height: 14px;
     border-radius: 999px;
     border: none;
   }
 
   &::-moz-range-track {
-    height: 8px;
+    height: 14px;
     border-radius: 999px;
     border: none;
     background: transparent;
@@ -178,8 +209,8 @@ const WeekSlider = styled.input`
   &::-webkit-slider-thumb {
     -webkit-appearance: none;
     appearance: none;
-    width: 18px;
-    height: 18px;
+    width: 24px;
+    height: 24px;
     margin-top: -5px;
     border-radius: 50%;
     border: none;
@@ -188,8 +219,8 @@ const WeekSlider = styled.input`
   }
 
   &::-moz-range-thumb {
-    width: 18px;
-    height: 18px;
+    width: 24px;
+    height: 24px;
     border-radius: 50%;
     border: none;
     background: #6a5ce6;
