@@ -2,7 +2,7 @@ import styled from 'styled-components';
 import { useQuery } from '@tanstack/react-query';
 import BackButton from '../../components/BackButton';
 import ArrowRow from '../../components/ArrowRow';
-import { AuthTitle, PageWrap } from '../../styles/auth.styles';
+import { AuthTitle, PageWrap, PageSpinnerWrap, Spinner } from '../../styles/auth.styles';
 import { formatIncomeLevel } from '../../utils/income';
 import { getSettings } from '../../api/users';
 
@@ -14,11 +14,13 @@ export default function EditProfile() {
 
   if (!settings) {
     return (
-      <PageWrap>
+        <PageWrap>
         <BackButton to="/mypage/settings" />
         <AuthTitle $size={20}>내 정보 수정</AuthTitle>
-        <LoadingText>불러오는 중...</LoadingText>
-      </PageWrap>
+        <PageSpinnerWrap>
+            <Spinner />
+        </PageSpinnerWrap>
+        </PageWrap>
     );
   }
 

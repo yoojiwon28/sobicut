@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import styled from 'styled-components';
 import BackButton from '../../components/BackButton';
-import { AuthTitle, Field, Label, Input, FormColumn, ButtonPrimary } from '../../styles/auth.styles';
+import { AuthTitle, Field, Label, Input, FormColumn, ButtonPrimary, Spinner } from '../../styles/auth.styles';
 import { getSettings, updateNickname } from '../../api/users';
 import { ApiError } from '../../api/client';
 
@@ -55,7 +55,7 @@ export default function EditNickname() {
         </div>
 
         <ButtonPrimary type="submit" disabled={!nickname.trim() || mutation.isPending}>
-          {mutation.isPending ? '변경 중...' : '변경하기'}
+           {mutation.isPending ? <Spinner $size={18} $color="#fff" $trackColor="rgba(255,255,255,0.4)" /> : '변경하기'}
         </ButtonPrimary>
       </FormColumn>
     </form>
