@@ -3,6 +3,8 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import styled from 'styled-components';
 import BackButton from '../../components/BackButton';
 import DateTimePickerField from '../../components/DateTimePickerField';
+import BottomSheet from '../../components/BottomSheet';
+import TagQuestions, { TAG_LABEL, CONTEXT_TAG_NAMES } from '../../components/TagQuestions';
 import { AuthTitle } from '../../styles/auth.styles';
 import { FieldGroup, FieldLabel, OutlinedInput, OutlinedSelect, OutlinedTextarea } from '../../styles/field.styles';
 import { DUMMY_ALL_TRANSACTIONS, DUMMY_TODAY_EXPENSES } from '../../mocks/transactions';
@@ -11,6 +13,12 @@ import incomeIcon from '../../assets/images/income_icon.svg';
 import expenseIcon from '../../assets/images/expense_icon.svg';
 import angleRightIcon from '../../assets/images/angle_right.svg';
 import editIcon from '../../assets/images/edit_icon.svg';
+
+// Q1 버튼 전용 카피(질문-답변 프레이밍). 태그 표현과 무관한 UI 문구라 TAG_LABEL과 분리한다.
+const PLAN_OPTION_COPY: Record<string, string> = {
+  즉흥성: '아니요, 바로 샀어요',
+  '충분한 숙고': '네, 고민하고 샀어요',
+};
 
 export default function TransactionDetail() {
   const { id } = useParams<{ id: string }>();
@@ -23,6 +31,9 @@ export default function TransactionDetail() {
   const [memo, setMemo] = useState(tx?.description ?? '');
   const [date, setDate] = useState(tx?.transaction_date ?? '');
   const [time, setTime] = useState(tx?.transaction_time ?? '');
+  const [planTag, setPlanTag] = useState<string | null>(tx?.planTag ?? null);
+  const [contextTags, setContextTags] = useState<string[]>(tx?.contextTags ?? []);
+  const [tagSheetOpen, setTagSheetOpen] = useState(false);
 
   if (!tx) {
     return (
@@ -113,6 +124,36 @@ export default function TransactionDetail() {
       </StyledFieldGroup>
 
       <StyledFieldGroup>
+        <StyledFieldLabel>소비 태그</StyledFieldLabel>
+        {planTag ? (
+          <TagBox type="button" onClick={() => setTagSheetOpen(true)}>
+            <TagChipList>
+              <TagChip>{TAG_LABEL[planTag]}</TagChip>
+              {CONTEXT_TAG_NAMES.filter((name) => contextTags.includes(name)).map((name) => (
+                <TagChip key={name}>{TAG_LABEL[name]}</TagChip>
+              ))}
+            </TagChipList>
+            <PencilIcon viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path
+                d="M11.7 2.3a1.2 1.2 0 0 1 1.7 0l.3.3a1.2 1.2 0 0 1 0 1.7l-7.6 7.6-2.6.6.6-2.6 7.6-7.6Z"
+                stroke="currentColor"
+                strokeWidth="1.2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </PencilIcon>
+          </TagBox>
+        ) : (
+          <TagEmptyBox type="button" onClick={() => setTagSheetOpen(true)}>
+            <TagEmptyText>이 소비, 어떤 소비였나요?</TagEmptyText>
+            <PlusIcon viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M8 3v10M3 8h10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+            </PlusIcon>
+          </TagEmptyBox>
+        )}
+      </StyledFieldGroup>
+
+      <StyledFieldGroup>
         <StyledFieldLabel>메모</StyledFieldLabel>
         <StyledTextarea
           placeholder="메모를 작성해주세요"
@@ -124,7 +165,60 @@ export default function TransactionDetail() {
       <SubmitButton type="button" disabled={!isDirty} onClick={handleSubmit}>
         수정 완료
       </SubmitButton>
+
+      {tagSheetOpen && (
+        <TagEditSheet
+          transactionId={tx.id}
+          initialPlanTag={planTag}
+          initialContextTags={contextTags}
+          onClose={() => setTagSheetOpen(false)}
+          onSave={(nextPlanTag, nextContextTags) => {
+            setPlanTag(nextPlanTag);
+            setContextTags(nextContextTags);
+            setTagSheetOpen(false);
+          }}
+        />
+      )}
     </Page>
+  );
+}
+
+type TagEditSheetProps = {
+  transactionId: number;
+  initialPlanTag: string | null;
+  initialContextTags: string[];
+  onClose: () => void;
+  onSave: (planTag: string | null, contextTags: string[]) => void;
+};
+
+function TagEditSheet({ transactionId, initialPlanTag, initialContextTags, onClose, onSave }: TagEditSheetProps) {
+  const [planTag, setPlanTag] = useState(initialPlanTag);
+  const [contextTags, setContextTags] = useState(initialContextTags);
+
+  const toggleContextTag = (tag: string) => {
+    setContextTags((prev) => (prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]));
+  };
+
+  const handleSave = () => {
+    // TODO: PATCH /transactions/:id 연동, emotion_tag_ids 매핑 필요
+    console.log(`PATCH /transactions/${transactionId} (tags)`, { planTag, contextTags });
+    onSave(planTag, contextTags);
+  };
+
+  return (
+    <BottomSheet onClose={onClose}>
+      <TagQuestions
+        title="이 소비, 어떤 소비였나요?"
+        planTag={planTag}
+        contextTags={contextTags}
+        planOptionCopy={PLAN_OPTION_COPY}
+        onChangePlanTag={setPlanTag}
+        onToggleContextTag={toggleContextTag}
+      />
+      <TagSaveButton type="button" disabled={planTag === null} onClick={handleSave}>
+        저장
+      </TagSaveButton>
+    </BottomSheet>
   );
 }
 
@@ -268,6 +362,88 @@ const EmptyText = styled.p`
   color: #999;
   font-size: 13px;
   padding: 40px 0;
+`;
+
+const TagBox = styled.button`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  background: #F2F2F2;
+  border: none;
+  border-radius: 10px;
+  padding: 16px 18px;
+  cursor: pointer;
+  text-align: left;
+`;
+
+const TagChipList = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+`;
+
+const TagChip = styled.span`
+  display: inline-flex;
+  align-items: center;
+  background: #E2DEFF;
+  color: #3C3489;
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: 999px;
+`;
+
+const PencilIcon = styled.svg`
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  color: #8E8E93;
+`;
+
+const TagEmptyBox = styled.button`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  background: #fff;
+  border: 1px dashed #C7C1F5;
+  border-radius: 10px;
+  padding: 16px 18px;
+  cursor: pointer;
+  text-align: left;
+`;
+
+const TagEmptyText = styled.span`
+  font-size: 14px;
+  color: #6A5CE6;
+`;
+
+const PlusIcon = styled.svg`
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  color: #6A5CE6;
+`;
+
+const TagSaveButton = styled.button`
+  width: 100%;
+  margin-top: 20px;
+  padding: 14px;
+  border: none;
+  border-radius: 12px;
+  background: #6A5CE6;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+
+  &:disabled {
+    background: #F0F0F0;
+    color: #BDBDBD;
+    cursor: not-allowed;
+  }
 `;
 
 const SubmitButton = styled.button`

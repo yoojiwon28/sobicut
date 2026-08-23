@@ -24,6 +24,8 @@ export const DUMMY_TODAY_EXPENSES: Transaction[] = [
     transaction_time: '08:30',
     emotion_tags: [EMOTION_TAGS.행복함],
     created_at: '2026-08-06T08:30:00',
+    planTag: '즉흥성',
+    contextTags: ['스트레스', '장기적 가치'],
   },
   {
     id: 102,
