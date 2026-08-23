@@ -2,8 +2,11 @@ import { useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import BackButton from '../components/BackButton';
 import ChipSelect from '../components/ChipSelect';
-import DatePickerField from '../components/DatePickerField';
-import { AuthTitle, FormColumn, ButtonPrimary } from '../styles/auth.styles';
+import DateTimePickerField from '../components/DateTimePickerField';
+import { AuthTitle, FormColumn, ButtonPrimary, Spinner } from '../styles/auth.styles';
+import { createTransaction } from '../api/transactions';
+import { ApiError } from '../api/client';
+import styled from 'styled-components';
 import {
   FieldGroup,
   FieldLabel,
@@ -41,24 +44,30 @@ export default function AddIncome() {
     setAmount((prev) => String(Math.max(0, Number(prev || 0) + delta)));
   };
 
-  const handleSubmit = (e: FormEvent) => {
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    if (!canSubmit) return;
+    if (!canSubmit || submitting) return;
 
-    // POST /transactions
-    // TODO: 실제 API 연동. merchant는 수입에 해당 없어 빈 값으로 전송
-    const payload = {
-      amount: Number(amount),
-      type: 'income' as const,
-      category: source,
-      merchant: '',
-      description: memo,
-      transaction_date: date,
-      transaction_time: time,
-    };
-    console.log('POST /transactions', payload);
-
-    navigate('/');
+    setSubmitting(true);
+    setError('');
+    try {
+        await createTransaction({
+        amount: Number(amount),
+        type: 'income',
+        category: source,
+        description: memo,
+        transaction_date: date,
+        transaction_time: time,
+        });
+        navigate('/');
+    } catch (err) {
+        setError(err instanceof ApiError ? err.message : '등록에 실패했어요. 다시 시도해주세요.');
+    } finally {
+        setSubmitting(false);
+    }
   };
 
   return (
@@ -90,13 +99,15 @@ export default function AddIncome() {
           </AmountBox>
 
           <FieldGroup>
-            <FieldLabel>날짜</FieldLabel>
-            <DatePickerField value={date} onChange={setDate} />
-          </FieldGroup>
-
-          <FieldGroup>
-            <FieldLabel>시간</FieldLabel>
-            <OutlinedInput type="time" value={time} onChange={(e) => setTime(e.target.value)} />
+            <FieldLabel>결제일시</FieldLabel>
+            <DateTimePickerField
+                date={date}
+                time={time}
+                onChange={(d, t) => {
+                setDate(d);
+                setTime(t);
+                }}
+            />
           </FieldGroup>
 
           <FieldGroup>
@@ -112,6 +123,7 @@ export default function AddIncome() {
               onChange={(e) => setMemo(e.target.value)}
             />
           </FieldGroup>
+          {error && <ErrorText>{error}</ErrorText>}
         </div>
 
         <ButtonPrimary type="submit" disabled={!canSubmit}>
@@ -121,3 +133,10 @@ export default function AddIncome() {
     </form>
   );
 }
+
+const ErrorText = styled.p`
+  color: #e74c3c;
+  font-size: 12px;
+  text-align: center;
+  margin: 8px 0 16px;
+`;
