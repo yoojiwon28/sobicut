@@ -3,7 +3,7 @@ import styled from 'styled-components';
 import BackButton from '../../components/BackButton';
 import ArrowRow from '../../components/ArrowRow';
 import ToggleSwitch from '../../components/ToggleSwitch';
-import { AuthTitle, PageWrap } from '../../styles/auth.styles';
+import { AuthTitle, PageWrap, LoadingOverlay, Spinner } from '../../styles/auth.styles';
 import { useNavigate } from 'react-router-dom';
 import { logout as logoutApi } from '../../api/auth';
 import { useAuth } from '../../contexts/AuthContext';
@@ -16,15 +16,17 @@ export default function Settings() {
   const navigate = useNavigate();
   const { logout } = useAuth();
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
 
   const handleLogout = async () => {
+    setLoggingOut(true);
     try {
-      await logoutApi();
+        await logoutApi();
     } catch {
-      // 서버 로그아웃 실패해도 클라이언트 세션은 정리함
+        // 서버 로그아웃 실패해도 클라이언트 세션은 정리함
     } finally {
-      logout();
-      navigate('/onboarding');
+        logout();
+        navigate('/onboarding');
     }
   };
 
@@ -60,23 +62,30 @@ export default function Settings() {
       </MenuList>
 
       <FooterLinks>
-        <button type="button" onClick={handleLogout}>
-          로그아웃
+        <button type="button" onClick={handleLogout} disabled={loggingOut}>
+            로그아웃
         </button>
         <span>|</span>
         <button type="button" onClick={handleWithdraw}>
-          회원탈퇴
+            회원탈퇴
         </button>
       </FooterLinks>
       {showWithdrawModal && (
         <WithdrawModal
-          onClose={() => setShowWithdrawModal(false)}
-          onSuccess={() => {
+            onClose={() => setShowWithdrawModal(false)}
+            onSuccess={() => {
             logout();
             navigate('/onboarding');
-          }}
+            }}
         />
+      )}
+
+      {loggingOut && (
+        <LoadingOverlay>
+            <Spinner />
+        </LoadingOverlay>
       )}  
+
     </PageWrap>
   );
 }

@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import styled from 'styled-components';
 import Modal from './Modal';
-import { Field, Label, Input, ButtonPrimary } from '../styles/auth.styles';
+import { Field, Label, Input, ButtonPrimary, LoadingOverlay, Spinner } from '../styles/auth.styles';
 import { withdraw } from '../api/auth';
 import { ApiError } from '../api/client';
 
@@ -31,34 +31,40 @@ export default function WithdrawModal({ onClose, onSuccess }: WithdrawModalProps
     }
   };
 
-  return (
-    <Modal>
-      <form onSubmit={handleSubmit}>
-        <Title>정말 탈퇴하시겠어요?</Title>
-        <WarningText>
-          탈퇴 버튼 선택 시, 계정은
-          <br />
-          삭제되며 복구되지 않습니다.
-        </WarningText>
+ return (
+  <Modal>
+    <form onSubmit={handleSubmit}>
+      <Title>정말 탈퇴하시겠어요?</Title>
+      <WarningText>
+        탈퇴 버튼 선택 시, 계정은
+        <br />
+        삭제되며 복구되지 않습니다.
+      </WarningText>
 
-        <Field>
-          <Label>본인 확인을 위해 비밀번호를 입력해주세요</Label>
-          <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoFocus />
-        </Field>
+      <Field>
+        <Label>본인 확인을 위해 비밀번호를 입력해주세요</Label>
+        <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoFocus />
+      </Field>
 
-        {error && <ErrorText>{error}</ErrorText>}
+      {error && <ErrorText>{error}</ErrorText>}
 
-        <ButtonRow>
-          <CancelButton type="button" onClick={onClose}>
-            취소
-          </CancelButton>
-          <ButtonPrimary type="submit" disabled={!password || submitting}>
-            {submitting ? '처리 중...' : '탈퇴하기'}
-          </ButtonPrimary>
-        </ButtonRow>
-      </form>
-    </Modal>
-  );
+      <ButtonRow>
+        <CancelButton type="button" onClick={onClose}>
+          취소
+        </CancelButton>
+        <ButtonPrimary type="submit" disabled={!password || submitting}>
+          탈퇴하기
+        </ButtonPrimary>
+      </ButtonRow>
+    </form>
+
+    {submitting && (
+      <LoadingOverlay>
+        <Spinner />
+      </LoadingOverlay>
+    )}
+  </Modal>
+);
 }
 
 const Title = styled.h2`
