@@ -25,19 +25,24 @@ import { parseCardMessage } from '../api/transactions';
 import { ApiError } from '../api/client';
 import editIcon from '../assets/images/edit_icon.svg';
 
-type PlanTag = 'IMPULSIVE' | 'DELIBERATE';
-type ContextTag = 'STRESS' | 'NO_COMPARE' | 'LONG_VALUE';
+// 태그 식별자는 백엔드 emotion_tags 의 한글 name 문자열을 그대로 쓴다.
+// TODO: GET /emotions 의 type 필드로 계획성/소비특성 그룹을 구분하게 되면 아래 두 배열은 제거한다.
+const PLAN_TAG_NAMES: string[] = ['즉흥성', '충분한 숙고'];
+const CONTEXT_TAG_NAMES: string[] = ['스트레스', '비교 회피', '장기적 가치'];
 
-const PLAN_OPTIONS: { value: PlanTag; label: string }[] = [
-  { value: 'IMPULSIVE', label: '아니요, 바로 샀어요' },
-  { value: 'DELIBERATE', label: '네, 고민하고 샀어요' },
-];
+const TAG_LABEL: Record<string, string> = {
+  즉흥성: '바로 샀어요',
+  '충분한 숙고': '고민하고 샀어요',
+  스트레스: '스트레스 받아서',
+  '비교 회피': '비교 안 하고',
+  '장기적 가치': '오래 쓸 소비',
+};
 
-const CONTEXT_OPTIONS: { value: ContextTag; label: string }[] = [
-  { value: 'STRESS', label: '스트레스 받아서' },
-  { value: 'NO_COMPARE', label: '비교 안 하고' },
-  { value: 'LONG_VALUE', label: '오래 쓸 소비' },
-];
+// Q1 버튼 전용 카피(질문-답변 프레이밍). 태그 표현과 무관한 UI 문구라 TAG_LABEL과 분리한다.
+const PLAN_OPTION_COPY: Record<string, string> = {
+  즉흥성: '아니요, 바로 샀어요',
+  '충분한 숙고': '네, 고민하고 샀어요',
+};
 
 const AMOUNT_STEP = 5000;
 
@@ -53,8 +58,8 @@ export default function AddExpense() {
   const [date, setDate] = useState(toDateInputValue(new Date()));
   const [time, setTime] = useState(toTimeValue(new Date()));
   const [category, setCategory] = useState('');
-  const [planTag, setPlanTag] = useState<PlanTag | null>(null);
-  const [contextTags, setContextTags] = useState<ContextTag[]>([]);
+  const [planTag, setPlanTag] = useState<string | null>(null);
+  const [contextTags, setContextTags] = useState<string[]>([]);
   const [importError, setImportError] = useState('');
   const [showMemo, setShowMemo] = useState(false);
   const [memo, setMemo] = useState('');
@@ -65,7 +70,7 @@ export default function AddExpense() {
     setAmount((prev) => String(Math.max(0, Number(prev || 0) + delta)));
   };
 
-  const toggleContextTag = (tag: ContextTag) => {
+  const toggleContextTag = (tag: string) => {
     setContextTags((prev) => (prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]));
   };
 
@@ -102,7 +107,7 @@ export default function AddExpense() {
     if (!canSubmit) return;
 
     // POST /transactions
-    // TODO: 실제 API 연동. planTag/contextTags → 백엔드 감정 태그 ID 매핑 필요
+    // TODO: 실제 API 연동. planTag/contextTags(한글 name) → GET /emotions 조회 결과의 emotion_tag_ids 로 매핑 필요
     const payload = {
       amount: Number(amount),
       type: 'expense' as const,
@@ -185,14 +190,14 @@ export default function AddExpense() {
           <FieldGroup>
             <FieldLabel>이 소비 미리 계획했나요?</FieldLabel>
             <PlanGrid>
-              {PLAN_OPTIONS.map((option) => (
+              {PLAN_TAG_NAMES.map((name) => (
                 <PlanOption
-                  key={option.value}
+                  key={name}
                   type="button"
-                  $active={planTag === option.value}
-                  onClick={() => setPlanTag(option.value)}
+                  $active={planTag === name}
+                  onClick={() => setPlanTag(name)}
                 >
-                  {option.label}
+                  {PLAN_OPTION_COPY[name]}
                 </PlanOption>
               ))}
             </PlanGrid>
@@ -204,14 +209,14 @@ export default function AddExpense() {
               <MultiSelectHint>복수 선택</MultiSelectHint>
             </QuestionLabelRow>
             <ContextChipList>
-              {CONTEXT_OPTIONS.map((option) => {
-                const active = contextTags.includes(option.value);
+              {CONTEXT_TAG_NAMES.map((name) => {
+                const active = contextTags.includes(name);
                 return (
                   <ContextChip
-                    key={option.value}
+                    key={name}
                     type="button"
                     $active={active}
-                    onClick={() => toggleContextTag(option.value)}
+                    onClick={() => toggleContextTag(name)}
                   >
                     {active && (
                       <CheckIcon viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -224,7 +229,7 @@ export default function AddExpense() {
                         />
                       </CheckIcon>
                     )}
-                    {option.label}
+                    {TAG_LABEL[name]}
                   </ContextChip>
                 );
               })}
