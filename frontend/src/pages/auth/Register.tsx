@@ -22,6 +22,7 @@ import {
 } from '../../styles/auth.styles';
 
 const PASSWORD_REGEX = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,12}$/;
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const CheckMark = styled.span`
   position: absolute;
@@ -69,6 +70,11 @@ export default function Register() {
 
   const handleCheckEmail = async () => {
     if (!email) return;
+    if (!EMAIL_REGEX.test(email)) {
+      setEmailAvailable(false);
+      setEmailMessage('올바른 이메일 형식을 입력해주세요.');
+      return;
+    }
     setEmailChecking(true);
     setEmailMessage('');
     try {
