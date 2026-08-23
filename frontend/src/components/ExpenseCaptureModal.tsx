@@ -9,38 +9,30 @@ import { parseSpendingText } from '../utils/parseSpendingText';
 import { formatSlashDateTime } from '../utils/date';
 import angleRightIcon from '../assets/images/angle_right.svg';
 
-type PlanTag = 'IMPULSIVE' | 'DELIBERATE';
-type ContextTag = 'STRESS' | 'NO_COMPARE' | 'LONG_VALUE';
+// 태그 식별자는 백엔드 emotion_tags 의 한글 name 문자열을 그대로 쓴다.
+// TODO: GET /emotions 의 type 필드로 계획성/소비특성 그룹을 구분하게 되면 아래 두 배열은 제거한다.
+const PLAN_TAG_NAMES: string[] = ['즉흥성', '충분한 숙고'];
+const CONTEXT_TAG_NAMES: string[] = ['스트레스', '비교 회피', '장기적 가치'];
 
-const PLAN_OPTIONS: { value: PlanTag; label: string }[] = [
-  { value: 'IMPULSIVE', label: '아니요\n바로 샀어요' },
-  { value: 'DELIBERATE', label: '네\n고민하고 샀어요' },
-];
+const TAG_LABEL: Record<string, string> = {
+  즉흥성: '바로 샀어요',
+  '충분한 숙고': '고민하고 샀어요',
+  스트레스: '스트레스 받아서',
+  '비교 회피': '비교 안 하고',
+  '장기적 가치': '오래 쓸 소비',
+};
 
-const CONTEXT_OPTIONS: { value: ContextTag; label: string }[] = [
-  { value: 'STRESS', label: '스트레스 받아서' },
-  { value: 'NO_COMPARE', label: '비교 안 하고' },
-  { value: 'LONG_VALUE', label: '오래 쓸 소비' },
-];
+// Q1 버튼 전용 카피(질문-답변 프레이밍). 태그 표현과 무관한 UI 문구라 TAG_LABEL과 분리한다.
+const PLAN_OPTION_COPY: Record<string, string> = {
+  즉흥성: '아니요\n바로 샀어요',
+  '충분한 숙고': '네\n고민하고 샀어요',
+};
 
 // TODO: 실제 집계 API 연동 전까지 사용하는 목 데이터
-const MOCK_PATTERN = {
-  planning: { IMPULSIVE: 70, DELIBERATE: 30 },
-  context: { STRESS: 54, NO_COMPARE: 40, LONG_VALUE: 11 },
+const MOCK_PATTERN: { planning: Record<string, number>; context: Record<string, number> } = {
+  planning: { 즉흥성: 70, '충분한 숙고': 30 },
+  context: { 스트레스: 54, '비교 회피': 40, '장기적 가치': 11 },
 };
-
-const PLAN_LABELS: Record<PlanTag, string> = {
-  IMPULSIVE: '바로 샀어요',
-  DELIBERATE: '고민하고 샀어요',
-};
-
-const CONTEXT_LABELS: Record<ContextTag, string> = {
-  STRESS: '스트레스 받아서',
-  NO_COMPARE: '비교 안 하고',
-  LONG_VALUE: '오래 쓸 소비',
-};
-
-const CONTEXT_PATTERN_KEYS: ContextTag[] = ['STRESS', 'NO_COMPARE', 'LONG_VALUE'];
 
 type Step = 'confirm' | 'edit' | 'emotion' | 'result';
 
@@ -63,10 +55,10 @@ export default function ExpenseCaptureModal({ rawText, onClose }: ExpenseCapture
   const [date, setDate] = useState(parsed.date ?? '');
   const [time, setTime] = useState(parsed.time ?? '');
   const [category, setCategory] = useState(suggestedCategory);
-  const [planTag, setPlanTag] = useState<PlanTag | null>(null);
-  const [contextTags, setContextTags] = useState<ContextTag[]>([]);
+  const [planTag, setPlanTag] = useState<string | null>(null);
+  const [contextTags, setContextTags] = useState<string[]>([]);
 
-  const toggleContextTag = (tag: ContextTag) => {
+  const toggleContextTag = (tag: string) => {
     setContextTags((prev) => (prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]));
   };
 
@@ -83,22 +75,21 @@ export default function ExpenseCaptureModal({ rawText, onClose }: ExpenseCapture
 
         <PlanningSection>
           <PlanningDonut
-            impulsive={MOCK_PATTERN.planning.IMPULSIVE}
-            deliberate={MOCK_PATTERN.planning.DELIBERATE}
+            segments={[
+              { percent: MOCK_PATTERN.planning[PLAN_TAG_NAMES[0]], color: '#6A5CE6' },
+              { percent: MOCK_PATTERN.planning[PLAN_TAG_NAMES[1]], color: '#C7C1F5' },
+            ]}
           />
           <PlanningLegend>
             <SectionLabel>계획성</SectionLabel>
             <LegendRows>
-              <LegendRow>
-                <LegendDot $color="#6A5CE6" />
-                <LegendLabel>{PLAN_LABELS.IMPULSIVE}</LegendLabel>
-                <LegendPercent>{MOCK_PATTERN.planning.IMPULSIVE}%</LegendPercent>
-              </LegendRow>
-              <LegendRow>
-                <LegendDot $color="#C7C1F5" />
-                <LegendLabel>{PLAN_LABELS.DELIBERATE}</LegendLabel>
-                <LegendPercent>{MOCK_PATTERN.planning.DELIBERATE}%</LegendPercent>
-              </LegendRow>
+              {PLAN_TAG_NAMES.map((name, index) => (
+                <LegendRow key={name}>
+                  <LegendDot $color={index === 0 ? '#6A5CE6' : '#C7C1F5'} />
+                  <LegendLabel>{TAG_LABEL[name]}</LegendLabel>
+                  <LegendPercent>{MOCK_PATTERN.planning[name]}%</LegendPercent>
+                </LegendRow>
+              ))}
             </LegendRows>
           </PlanningLegend>
         </PlanningSection>
@@ -109,14 +100,14 @@ export default function ExpenseCaptureModal({ rawText, onClose }: ExpenseCapture
             <ContextCaption>(중복 집계)</ContextCaption>
           </ContextSectionLabelRow>
           <BarList>
-            {CONTEXT_PATTERN_KEYS.map((key) => (
-              <BarItem key={key}>
+            {CONTEXT_TAG_NAMES.map((name) => (
+              <BarItem key={name}>
                 <BarHeader>
-                  <BarLabel>{CONTEXT_LABELS[key]}</BarLabel>
-                  <BarPercent>{MOCK_PATTERN.context[key]}%</BarPercent>
+                  <BarLabel>{TAG_LABEL[name]}</BarLabel>
+                  <BarPercent>{MOCK_PATTERN.context[name]}%</BarPercent>
                 </BarHeader>
                 <BarTrack>
-                  <BarFill $percent={MOCK_PATTERN.context[key]} />
+                  <BarFill $percent={MOCK_PATTERN.context[name]} />
                 </BarTrack>
               </BarItem>
             ))}
@@ -144,14 +135,14 @@ export default function ExpenseCaptureModal({ rawText, onClose }: ExpenseCapture
 
           <QuestionLabel>이 소비 미리 계획했나요?</QuestionLabel>
           <PlanGrid>
-            {PLAN_OPTIONS.map((option) => (
+            {PLAN_TAG_NAMES.map((name) => (
               <PlanOption
-                key={option.value}
+                key={name}
                 type="button"
-                $active={planTag === option.value}
-                onClick={() => setPlanTag(option.value)}
+                $active={planTag === name}
+                onClick={() => setPlanTag(name)}
               >
-                {option.label}
+                {PLAN_OPTION_COPY[name]}
               </PlanOption>
             ))}
           </PlanGrid>
@@ -162,14 +153,14 @@ export default function ExpenseCaptureModal({ rawText, onClose }: ExpenseCapture
               <MultiSelectHint>복수 선택</MultiSelectHint>
             </QuestionLabelRow>
             <ContextChipList>
-              {CONTEXT_OPTIONS.map((option) => {
-                const active = contextTags.includes(option.value);
+              {CONTEXT_TAG_NAMES.map((name) => {
+                const active = contextTags.includes(name);
                 return (
                   <ContextChip
-                    key={option.value}
+                    key={name}
                     type="button"
                     $active={active}
-                    onClick={() => toggleContextTag(option.value)}
+                    onClick={() => toggleContextTag(name)}
                   >
                     {active && (
                       <CheckIcon viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -182,7 +173,7 @@ export default function ExpenseCaptureModal({ rawText, onClose }: ExpenseCapture
                         />
                       </CheckIcon>
                     )}
-                    {option.label}
+                    {TAG_LABEL[name]}
                   </ContextChip>
                 );
               })}
@@ -321,32 +312,31 @@ const DONUT_STROKE = 18;
 const DONUT_RADIUS = (DONUT_SIZE - DONUT_STROKE) / 2;
 const DONUT_CENTER = DONUT_SIZE / 2;
 
-function PlanningDonut({ impulsive, deliberate }: { impulsive: number; deliberate: number }) {
+type DonutSegment = { percent: number; color: string };
+
+function PlanningDonut({ segments }: { segments: DonutSegment[] }) {
+  let cumulative = 0;
   return (
     <DonutSvg viewBox={`0 0 ${DONUT_SIZE} ${DONUT_SIZE}`} width={DONUT_SIZE} height={DONUT_SIZE}>
       <g transform={`rotate(-90 ${DONUT_CENTER} ${DONUT_CENTER})`}>
-        <circle
-          cx={DONUT_CENTER}
-          cy={DONUT_CENTER}
-          r={DONUT_RADIUS}
-          fill="none"
-          stroke="#6A5CE6"
-          strokeWidth={DONUT_STROKE}
-          pathLength={100}
-          strokeDasharray={`${impulsive} ${100 - impulsive}`}
-          strokeDashoffset={0}
-        />
-        <circle
-          cx={DONUT_CENTER}
-          cy={DONUT_CENTER}
-          r={DONUT_RADIUS}
-          fill="none"
-          stroke="#C7C1F5"
-          strokeWidth={DONUT_STROKE}
-          pathLength={100}
-          strokeDasharray={`${deliberate} ${100 - deliberate}`}
-          strokeDashoffset={-impulsive}
-        />
+        {segments.map((segment, index) => {
+          const dashOffset = -cumulative;
+          cumulative += segment.percent;
+          return (
+            <circle
+              key={index}
+              cx={DONUT_CENTER}
+              cy={DONUT_CENTER}
+              r={DONUT_RADIUS}
+              fill="none"
+              stroke={segment.color}
+              strokeWidth={DONUT_STROKE}
+              pathLength={100}
+              strokeDasharray={`${segment.percent} ${100 - segment.percent}`}
+              strokeDashoffset={dashOffset}
+            />
+          );
+        })}
       </g>
     </DonutSvg>
   );
