@@ -27,7 +27,7 @@ export default function CalendarPage() {
   const month = activeStartDate.getMonth() + 1;
   const selectedKey = toKey(selectedDate);
 
-  // 캘린더 날짜별 합계 
+  // 캘린더 날짜별 합계
   const { data: dailyReport = [] } = useQuery({
     queryKey: ['reports', 'daily', { year, month }],
     queryFn: () => getDailyReport({ year, month }),
@@ -52,48 +52,50 @@ export default function CalendarPage() {
   return (
     <Page>
       <Header>
-        <Logo2 width={120} />
-        <AddButton type="button" onClick={() => setShowAddModal(true)}>
+        <Logo2 width={112} />
+        <AddButton type="button" onClick={() => setShowAddModal(true)} aria-label="내역 추가">
           +
         </AddButton>
       </Header>
 
-      <StyledCalendar
-        value={selectedDate}
-        onClickDay={(date) => setSelectedDate(date)}
-        onActiveStartDateChange={({ activeStartDate: next }) => {
-          if (next) setActiveStartDate(next);
-        }}
-        locale="ko-KR"
-        calendarType="gregory"
-        formatDay={(_, date) => String(date.getDate())}
-        minDetail="year"
-        next2Label={null}
-        prev2Label={null}
-        showNeighboringMonth={false}
-        tileClassName={({ date, view }) => {
-          if (view !== 'month') return '';
-          if (isSameDay(date, selectedDate)) return 'is-selected';
-          if (isSameDay(date, today)) return 'is-today';
-          return '';
-        }}
-        tileContent={({ date, view }) => {
-          if (view !== 'month') return null;
-          const totals = dailyMap[toKey(date)];
-          if (!totals) return null;
-          const selected = isSameDay(date, selectedDate);
-          return (
-            <DayAmounts>
-              {totals.expense > 0 && (
-                <ExpenseAmount $selected={selected}>-{totals.expense.toLocaleString()}</ExpenseAmount>
-              )}
-              {totals.income > 0 && (
-                <IncomeAmount $selected={selected}>+{totals.income.toLocaleString()}</IncomeAmount>
-              )}
-            </DayAmounts>
-          );
-        }}
-      />
+      <CalendarCard>
+        <StyledCalendar
+          value={selectedDate}
+          onClickDay={(date) => setSelectedDate(date)}
+          onActiveStartDateChange={({ activeStartDate: next }) => {
+            if (next) setActiveStartDate(next);
+          }}
+          locale="ko-KR"
+          calendarType="gregory"
+          formatDay={(_, date) => String(date.getDate())}
+          minDetail="year"
+          next2Label={null}
+          prev2Label={null}
+          showNeighboringMonth={false}
+          tileClassName={({ date, view }) => {
+            if (view !== 'month') return '';
+            if (isSameDay(date, selectedDate)) return 'is-selected';
+            if (isSameDay(date, today)) return 'is-today';
+            return '';
+          }}
+          tileContent={({ date, view }) => {
+            if (view !== 'month') return null;
+            const totals = dailyMap[toKey(date)];
+            if (!totals) return null;
+            const selected = isSameDay(date, selectedDate);
+            return (
+              <DayAmounts>
+                {totals.expense > 0 && (
+                  <ExpenseAmount $selected={selected}>-{totals.expense.toLocaleString()}</ExpenseAmount>
+                )}
+                {totals.income > 0 && (
+                  <IncomeAmount $selected={selected}>+{totals.income.toLocaleString()}</IncomeAmount>
+                )}
+              </DayAmounts>
+            );
+          }}
+        />
+      </CalendarCard>
 
       <ExpensePanel>
         <ExpensePanelHeader>
@@ -125,7 +127,7 @@ export default function CalendarPage() {
                   {tx.transaction_time.slice(0, 5)} · {tx.category}
                 </ItemMeta>
               </ItemInfo>
-              <ItemAmount>
+              <ItemAmount $type={tx.type}>
                 {tx.type === 'expense' ? '-' : '+'}
                 {tx.amount.toLocaleString()}원
               </ItemAmount>
@@ -155,26 +157,26 @@ export default function CalendarPage() {
   );
 }
 
-
 const Page = styled.div`
-  padding: 20px;
+  padding: 20px 16px 32px;
 `;
 
 const Header = styled.div`
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 16px;
+  align-items: center;
+  padding: 4px 4px 22px;
 `;
 
 const AddButton = styled.button`
-  width: 44px;
-  height: 44px;
+  width: 42px;
+  height: 42px;
   border: none;
-  border-radius: 12px;
+  border-radius: 14px;
   background: #6a5ce6;
   color: #fff;
   font-size: 22px;
+  font-weight: 300;
   line-height: 1;
   padding: 0;
   display: flex;
@@ -183,37 +185,58 @@ const AddButton = styled.button`
   -webkit-appearance: none;
   appearance: none;
   cursor: pointer;
+  box-shadow: 0 6px 16px rgba(106, 92, 230, 0.32);
+  transition: transform 0.15s ease;
+
+  &:active {
+    transform: scale(0.94);
+  }
+`;
+
+const CalendarCard = styled.div`
+  background: #fff;
+  border-radius: 24px;
+  padding: 18px 14px 10px;
+  box-shadow: 0 4px 20px rgba(17, 17, 17, 0.05);
 `;
 
 const DayAmounts = styled.div`
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0;
+  gap: 1px;
+  margin-top: 1px;
 `;
 
 const ExpenseAmount = styled.span<{ $selected?: boolean }>`
-  font-size: 9px;
+  font-size: 8px;
+  font-weight: 600;
   line-height: 1.2;
+  letter-spacing: -0.2px;
   color: ${({ $selected }) => ($selected ? '#fff' : '#ff7d7d')};
 `;
 
 const IncomeAmount = styled.span<{ $selected?: boolean }>`
-  font-size: 9px;
+  font-size: 8px;
+  font-weight: 600;
   line-height: 1.2;
+  letter-spacing: -0.2px;
   color: ${({ $selected }) => ($selected ? '#fff' : '#6a5ce6')};
 `;
 
 const ExpensePanel = styled.div`
-  margin-top: 20px;
-  border-top: 1px solid #eee;
-  padding-top: 16px;
+  margin-top: 16px;
+  background: #fff;
+  border-radius: 24px;
+  padding: 20px 18px;
+  box-shadow: 0 4px 20px rgba(17, 17, 17, 0.05);
 `;
 
 const ExpensePanelHeader = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
+  font-size: 15px;
   font-weight: 700;
   margin-bottom: 12px;
 `;
@@ -234,14 +257,18 @@ const ExpenseRow = styled.div`
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 10px 0;
+  padding: 12px 0;
+
+  & + & {
+    border-top: 1px solid #f2f0fa;
+  }
 `;
 
 const ItemIcon = styled.div`
-  width: 40px;
-  height: 40px;
-  border-radius: 10px;
-  background: #ece9fb;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: #f4f2fc;
   flex-shrink: 0;
   display: flex;
   align-items: center;
@@ -250,30 +277,33 @@ const ItemIcon = styled.div`
 
 const ItemInfo = styled.div`
   flex: 1;
+  min-width: 0;
 `;
 
 const ItemName = styled.div`
-  font-size: 14px;
-  font-weight: 600;
+  font-size: 14.5px;
+  font-weight: 700;
+  color: #222;
 `;
 
 const ItemMeta = styled.div`
   font-size: 12px;
-  color: #888;
-  margin-top: 2px;
+  color: #999;
+  margin-top: 3px;
 `;
 
-const ItemAmount = styled.div`
-  font-size: 14px;
-  font-weight: 700;
-  color: #000;
+const ItemAmount = styled.div<{ $type?: 'income' | 'expense' }>`
+  font-size: 14.5px;
+  font-weight: 800;
+  color: ${({ $type }) => ($type === 'income' ? '#6a5ce6' : '#ff7d7d')};
+  flex-shrink: 0;
 `;
 
 const EmptyText = styled.div`
   font-size: 13px;
   color: #999;
   text-align: center;
-  padding: 24px 0;
+  padding: 28px 0;
 `;
 
 const ModalOverlay = styled.div`

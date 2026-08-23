@@ -10,19 +10,30 @@ export const StyledCalendar = styled(ReactCalendar)<{ $compact?: boolean }>`
 
   .react-calendar__navigation {
     display: flex;
-    justify-content: center;
+    justify-content: ${({ $compact }) => ($compact ? 'center' : 'space-between')};
     align-items: center;
-    gap: ${({ $compact }) => ($compact ? '10px' : '24px')};
-    margin-bottom: ${({ $compact }) => ($compact ? '6px' : '12px')};
+    gap: ${({ $compact }) => ($compact ? '10px' : '0')};
+    margin-bottom: ${({ $compact }) => ($compact ? '6px' : '20px')};
+    padding: ${({ $compact }) => ($compact ? '0' : '0 2px')};
   }
 
   .react-calendar__navigation button {
     background: none;
     border: none;
+    font-family: inherit;
     font-size: ${({ $compact }) => ($compact ? '13px' : '16px')};
     font-weight: 700;
     cursor: pointer;
-    color: #000;
+    color: ${({ $compact }) => ($compact ? '#000' : '#999')};
+    ${({ $compact }) =>
+      !$compact &&
+      `
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    `}
   }
 
   .react-calendar__navigation button:enabled:hover,
@@ -35,16 +46,19 @@ export const StyledCalendar = styled(ReactCalendar)<{ $compact?: boolean }>`
     cursor: default;
   }
 
-  .react-calendar__navigation__label {
-    font-size: ${({ $compact }) => ($compact ? '14px' : '16px')};
-    font-weight: 700;
+  .react-calendar__navigation button.react-calendar__navigation__label {
+    font-size: ${({ $compact }) => ($compact ? '14px' : '18px')};
+    font-weight: 600;
+    letter-spacing: 1px;
+    color: #000;
   }
 
   .react-calendar__month-view__weekdays {
     text-align: center;
-    font-size: ${({ $compact }) => ($compact ? '10px' : '13px')};
-    color: #888;
-    margin-bottom: ${({ $compact }) => ($compact ? '4px' : '8px')};
+    font-size: ${({ $compact }) => ($compact ? '10px' : '12px')};
+    font-weight: 600;
+    color: #aaa;
+    margin-bottom: ${({ $compact }) => ($compact ? '4px' : '10px')};
   }
 
   .react-calendar__month-view__weekdays abbr {
@@ -53,17 +67,20 @@ export const StyledCalendar = styled(ReactCalendar)<{ $compact?: boolean }>`
 
   .react-calendar__tile {
     position: relative;
-    height: ${({ $compact }) => ($compact ? '32px' : '56px')};
+    height: ${({ $compact }) => ($compact ? '32px' : '60px')};
     background: transparent;
-    border-radius: 10px;
-    margin: 2px 0;
+    border-radius: ${({ $compact }) => ($compact ? '10px' : '14px')};
+    margin: ${({ $compact }) => ($compact ? '2px 0' : '3px 0')};
     border: none;
+    font-family: inherit;
     color: #000;
     font-size: ${({ $compact }) => ($compact ? '11px' : '14px')};
+    font-weight: 500;
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
+    justify-content: flex-start;
+    padding-top: ${({ $compact }) => ($compact ? '6px' : '9px')};
     gap: 2px;
   }
 
@@ -101,6 +118,7 @@ export const StyledCalendar = styled(ReactCalendar)<{ $compact?: boolean }>`
 
   .react-calendar__tile.is-selected {
     background: #6a5ce6;
+    box-shadow: ${({ $compact }) => ($compact ? 'none' : '0 6px 14px rgba(106, 92, 230, 0.35)')};
   }
 
   .react-calendar__tile.is-selected:enabled:hover,
