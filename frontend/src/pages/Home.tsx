@@ -1,11 +1,14 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import styled, { keyframes } from 'styled-components';
 import Logo2 from '../components/Logo2';
 import ExpenseList from '../components/ExpenseList';
 import ExpenseCaptureModal from '../components/ExpenseCaptureModal';
 import { ButtonPrimary } from '../styles/auth.styles';
-import { DUMMY_TODAY_EXPENSES } from '../mocks/transactions';
+import { getSettings } from '../api/users';
+import { getTransactions } from '../api/transactions';
+import { toDateKey } from '../utils/date';
 import { DUMMY_CAPTURED_SMS } from '../mocks/pendingCapture';
 import notificationIcon from '../assets/images/notification_icon.svg';
 import {
@@ -16,8 +19,6 @@ import {
   getWalletLevelIndex,
 } from '../utils/wallet';
 
-// TODO: 실제 프로필 API
-const DUMMY_USER_NAME = '박영호';
 
 // TODO: 알림 여부 실제 알림 API
 const hasNotification = true;
@@ -48,6 +49,17 @@ export default function Home() {
   const navigate = useNavigate();
   const [showCaptureModal, setShowCaptureModal] = useState(hasPendingCapture);
 
+  const { data: settings } = useQuery({
+    queryKey: ['users', 'me', 'settings'],
+    queryFn: getSettings,
+  });
+
+  const today = toDateKey(new Date());
+  const { data: todayExpenses = [] } = useQuery({
+    queryKey: ['transactions', { date: today, type: 'expense' }],
+    queryFn: () => getTransactions({ date: today, type: 'expense' }),
+  });
+
   const levelIndex = getWalletLevelIndex(DUMMY_SCORES.wallet_temperature.level);
   const walletImage = WALLET_IMAGES[levelIndex];
   const walletStatusText = WALLET_STATUS_TEXT[levelIndex];
@@ -57,7 +69,7 @@ export default function Home() {
   const tempPercent = Math.min(100, Math.max(0, DUMMY_SCORES.wallet_temperature.my_temp));
   const impulsePercent = Math.min(100, Math.max(0, DUMMY_SCORES.impulse_score));
 
-  const todayTotal = DUMMY_TODAY_EXPENSES.reduce((sum, tx) => sum + tx.amount, 0);
+  const todayTotal = todayExpenses.reduce((sum, tx) => sum + tx.amount, 0);
 
   return (
     <Page>
@@ -70,7 +82,7 @@ export default function Home() {
           </NotificationLink>
         </HeaderRow>
 
-        <Greeting> <strong>{DUMMY_USER_NAME}</strong> 님! 오늘도 절약해 봅시다</Greeting>
+        <Greeting> <strong>{settings?.nickname ?? '회원'}</strong> 님! 오늘도 절약해 봅시다</Greeting>
       </HeaderZone>
 
       <GaugeZone $tint={gaugeColor} $strength={levelIndex === 0 ? '66' : '33'}>
@@ -137,7 +149,7 @@ export default function Home() {
             <span>오늘의 지출 - {todayTotal.toLocaleString()}원</span>
             <MoreLink to="/expenses/today">+ 더보기</MoreLink>
           </ExpenseSectionHeader>
-          <ExpenseList items={DUMMY_TODAY_EXPENSES.slice(0, 3)} />
+          <ExpenseList items={todayExpenses.slice(0, 3)} />
         </ExpenseSection>
 
         <AddButton type="button" onClick={() => navigate('/expenses/add')}>
