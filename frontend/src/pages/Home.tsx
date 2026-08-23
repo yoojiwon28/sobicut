@@ -32,7 +32,7 @@ const DUMMY_SCORES = {
     my_temp: 97,
     peer_avg_temp: 110,
     diff: 7,
-    level: '임계',
+    level: '매우 안정',
     emoji: '😐',
     message: '지갑이 적당히 데워지고 있어요. 이 흐름을 유지해보세요',
   },
@@ -61,7 +61,7 @@ export default function Home() {
 
   return (
     <Page>
-      <div>
+      <HeaderZone>
         <HeaderRow>
           <Logo2 width={110} />
           <NotificationLink to="/notification" aria-label="알림">
@@ -71,7 +71,9 @@ export default function Home() {
         </HeaderRow>
 
         <Greeting> <strong>{DUMMY_USER_NAME}</strong> 님! 오늘도 절약해 봅시다</Greeting>
+      </HeaderZone>
 
+      <GaugeZone $tint={gaugeColor} $strength={levelIndex === 0 ? '66' : '33'}>
         <ScoreHeaders>
           <ScoreHeaderItem>
             <ScoreLabel>🌡️ 지갑 온도</ScoreLabel>
@@ -94,7 +96,6 @@ export default function Home() {
               </linearGradient>
             </defs>
 
-            
             <path d="M 30 160 A 130 130 0 0 1 160 30" stroke="#ececec" strokeWidth="26" strokeLinecap="round" fill="none" />
             <path d="M 160 30 A 130 130 0 0 1 290 160" stroke="#ececec" strokeWidth="26" strokeLinecap="round" fill="none" />
 
@@ -128,7 +129,9 @@ export default function Home() {
             상태: {walletStatusText}
           </StatusBadge>
         </StatusBadgeWrap>
+      </GaugeZone>
 
+      <BottomSection $tint={gaugeColor}>
         <ExpenseSection>
           <ExpenseSectionHeader>
             <span>오늘의 지출 - {todayTotal.toLocaleString()}원</span>
@@ -136,11 +139,11 @@ export default function Home() {
           </ExpenseSectionHeader>
           <ExpenseList items={DUMMY_TODAY_EXPENSES.slice(0, 3)} />
         </ExpenseSection>
-      </div>
 
-      <AddButton type="button" onClick={() => navigate('/expenses/add')}>
-        + 지출 추가
-      </AddButton>
+        <AddButton type="button" onClick={() => navigate('/expenses/add')}>
+          + 지출 추가
+        </AddButton>
+      </BottomSection>
 
       {showCaptureModal && (
         <ExpenseCaptureModal rawText={DUMMY_CAPTURED_SMS} onClose={() => setShowCaptureModal(false)} />
@@ -150,11 +153,33 @@ export default function Home() {
 }
 
 const Page = styled.div`
-  padding: 20px;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
   flex: 1;
+`;
+
+const HeaderZone = styled.div`
+  padding: 20px 20px 4px;
+`;
+
+const GaugeZone = styled.div<{ $tint: string; $strength?: string }>`
+  padding: 4px 20px 56px;
+  background: radial-gradient(
+    150% 70% at 50% 100%,
+    ${({ $tint, $strength }) => `${$tint}${$strength ?? '33'}`} 0%,
+    ${({ $tint }) => $tint}00 55%
+  );
+`;
+
+const BottomSection = styled.div<{ $tint: string }>`
+  position: relative;
+  z-index: 1;
+  margin-top: -28px;
+  flex: 1;
+  background: #fff;
+  border-radius: 28px 28px 0 0;
+  padding: 24px 20px 20px;
+ 
 `;
 
 const HeaderRow = styled.div`
@@ -185,7 +210,7 @@ const Badge = styled.span`
 const Greeting = styled.h1`
   font-size: 18px;
   font-weight: 400;
-  margin: 0 0 24px;
+  margin: 0 0 8px;
 `;
 
 const ScoreHeaders = styled.div`
@@ -242,7 +267,7 @@ const CharacterImg = styled.img`
 
 const StatusBadgeWrap = styled.div`
   text-align: center;
-  margin: 20px 0 28px;
+  margin: 20px 0 0;
 `;
 
 const StatusBadge = styled.span`
@@ -255,7 +280,7 @@ const StatusBadge = styled.span`
 `;
 
 const ExpenseSection = styled.div`
-  margin-bottom: 28px;
+  margin-bottom: 20px;
 `;
 
 const ExpenseSectionHeader = styled.div`
@@ -278,5 +303,5 @@ const MoreLink = styled(Link)`
 `;
 
 const AddButton = styled(ButtonPrimary)`
-  margin-top: 0;
+  margin-top: 4px;
 `;
