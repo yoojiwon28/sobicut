@@ -17,3 +17,18 @@ export function getTransactions(params: {
   const qs = query.toString();
   return apiFetch<Transaction[]>(`/transactions${qs ? `?${qs}` : ''}`);
 }
+
+export type ParsedCardMessage = {
+  amount: number;
+  merchant: string;
+  transaction_date: string; // 'YYYY-MM-DD'
+  transaction_time: string; // 'HH:MM'
+  card_company: string;
+};
+
+export function parseCardMessage(messageText: string) {
+  return apiFetch<ParsedCardMessage>('/transactions/parse', {
+    method: 'POST',
+    body: JSON.stringify({ message_text: messageText }),
+  });
+}

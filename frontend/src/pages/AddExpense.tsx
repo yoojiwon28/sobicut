@@ -3,8 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import BackButton from '../components/BackButton';
 import ChipSelect from '../components/ChipSelect';
-import DatePickerField from '../components/DatePickerField';
-import { AuthTitle, FormColumn, ButtonPrimary } from '../styles/auth.styles';
+import DateTimePickerField from '../components/DateTimePickerField';
+import { AuthTitle, FormColumn, ButtonPrimary, Spinner } from '../styles/auth.styles';
 import {
   FieldGroup,
   FieldLabel,
@@ -21,11 +21,23 @@ import {
   LinkButton,
 } from '../styles/field.styles';
 import { CATEGORY_OPTIONS, CATEGORY_ICONS } from '../utils/category';
-import { parseSpendingText } from '../utils/parseSpendingText';
+import { parseCardMessage } from '../api/transactions';
+import { ApiError } from '../api/client';
 import editIcon from '../assets/images/edit_icon.svg';
 
-// TODO: 감정 태그 목록 미확정, 임시 구성
-const EMOTION_TAGS = ['스트레스', '기쁨', '우울', '충동', '보상심리', '무기력'];
+type PlanTag = 'IMPULSIVE' | 'DELIBERATE';
+type ContextTag = 'STRESS' | 'NO_COMPARE' | 'LONG_VALUE';
+
+const PLAN_OPTIONS: { value: PlanTag; label: string }[] = [
+  { value: 'IMPULSIVE', label: '아니요, 바로 샀어요' },
+  { value: 'DELIBERATE', label: '네, 고민하고 샀어요' },
+];
+
+const CONTEXT_OPTIONS: { value: ContextTag; label: string }[] = [
+  { value: 'STRESS', label: '스트레스 받아서' },
+  { value: 'NO_COMPARE', label: '비교 안 하고' },
+  { value: 'LONG_VALUE', label: '오래 쓸 소비' },
+];
 
 const AMOUNT_STEP = 5000;
 
@@ -41,7 +53,8 @@ export default function AddExpense() {
   const [date, setDate] = useState(toDateInputValue(new Date()));
   const [time, setTime] = useState(toTimeValue(new Date()));
   const [category, setCategory] = useState('');
-  const [emotionTag, setEmotionTag] = useState('');
+  const [planTag, setPlanTag] = useState<PlanTag | null>(null);
+  const [contextTags, setContextTags] = useState<ContextTag[]>([]);
   const [importError, setImportError] = useState('');
   const [showMemo, setShowMemo] = useState(false);
   const [memo, setMemo] = useState('');
@@ -52,22 +65,35 @@ export default function AddExpense() {
     setAmount((prev) => String(Math.max(0, Number(prev || 0) + delta)));
   };
 
+  const toggleContextTag = (tag: ContextTag) => {
+    setContextTags((prev) => (prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]));
+  };
+
+  const [importing, setImporting] = useState(false);
+
   const handleImport = async () => {
     setImportError('');
+    let text: string;
     try {
-      const text = await navigator.clipboard.readText();
-      const parsed = parseSpendingText(text);
-
-      if (!parsed.amount && !parsed.merchant) {
-        setImportError('문자 형식을 인식하지 못했어요. 직접 입력해주세요.');
-        return;
-      }
-      if (parsed.amount) setAmount(String(parsed.amount));
-      if (parsed.merchant) setMerchant(parsed.merchant);
-      if (parsed.date) setDate(parsed.date);
-      if (parsed.time) setTime(parsed.time);
+        text = await navigator.clipboard.readText();
     } catch {
-      setImportError('클립보드를 읽어올 수 없어요. 문자 내용을 복사한 뒤 다시 시도해주세요.');
+        setImportError('클립보드를 읽어올 수 없어요. 문자 내용을 복사한 뒤 다시 시도해주세요.');
+        return;
+    }
+
+    setImporting(true);
+    try {
+        const parsed = await parseCardMessage(text);
+        setAmount(String(parsed.amount));
+        setMerchant(parsed.merchant);
+        setDate(parsed.transaction_date);
+        setTime(parsed.transaction_time);
+    } catch (err) {
+        setImportError(
+        err instanceof ApiError ? err.message : '문자 형식을 인식하지 못했어요. 직접 입력해주세요.',
+        );
+    } finally {
+        setImporting(false);
     }
   };
 
@@ -76,7 +102,7 @@ export default function AddExpense() {
     if (!canSubmit) return;
 
     // POST /transactions
-    // TODO: 실제 API 연동. 감정태그 필드명 백엔드와 확정 필요
+    // TODO: 실제 API 연동. planTag/contextTags → 백엔드 감정 태그 ID 매핑 필요
     const payload = {
       amount: Number(amount),
       type: 'expense' as const,
@@ -85,7 +111,8 @@ export default function AddExpense() {
       description: memo,
       transaction_date: date,
       transaction_time: time,
-      emotion_tag: emotionTag || undefined,
+      planTag,
+      contextTags,
     };
     console.log('POST /transactions', payload);
 
@@ -119,10 +146,9 @@ export default function AddExpense() {
               <AmountUnit>원</AmountUnit>
             </AmountRow>
           </AmountBox>
-          <ImportButton type="button" onClick={handleImport}>
-            소비내역 가져오기
+          <ImportButton type="button" onClick={handleImport} disabled={importing}>
+            {importing ? <Spinner $size={16} /> : '소비내역 가져오기'}
           </ImportButton>
-          {importError && <ErrorText>{importError}</ErrorText>}
 
           <FieldGroup>
             <FieldLabel>가맹점</FieldLabel>
@@ -135,13 +161,15 @@ export default function AddExpense() {
           </FieldGroup>
 
           <FieldGroup>
-            <FieldLabel>날짜</FieldLabel>
-            <DatePickerField value={date} onChange={setDate} />
-          </FieldGroup>
-
-          <FieldGroup>
-            <FieldLabel>시간</FieldLabel>
-            <OutlinedInput type="time" value={time} onChange={(e) => setTime(e.target.value)} />
+            <FieldLabel>결제일시</FieldLabel>
+            <DateTimePickerField
+                date={date}
+                time={time}
+                onChange={(d, t) => {
+                setDate(d);
+                setTime(t);
+                }}
+            />
           </FieldGroup>
 
           <FieldGroup>
@@ -155,8 +183,52 @@ export default function AddExpense() {
           </FieldGroup>
 
           <FieldGroup>
-            <FieldLabel>감정 태그</FieldLabel>
-            <ChipSelect options={EMOTION_TAGS} value={emotionTag} onChange={setEmotionTag} />
+            <FieldLabel>이 소비 미리 계획했나요?</FieldLabel>
+            <PlanGrid>
+              {PLAN_OPTIONS.map((option) => (
+                <PlanOption
+                  key={option.value}
+                  type="button"
+                  $active={planTag === option.value}
+                  onClick={() => setPlanTag(option.value)}
+                >
+                  {option.label}
+                </PlanOption>
+              ))}
+            </PlanGrid>
+          </FieldGroup>
+
+          <FieldGroup>
+            <QuestionLabelRow>
+              <FieldLabel>이 소비는…</FieldLabel>
+              <MultiSelectHint>복수 선택</MultiSelectHint>
+            </QuestionLabelRow>
+            <ContextChipList>
+              {CONTEXT_OPTIONS.map((option) => {
+                const active = contextTags.includes(option.value);
+                return (
+                  <ContextChip
+                    key={option.value}
+                    type="button"
+                    $active={active}
+                    onClick={() => toggleContextTag(option.value)}
+                  >
+                    {active && (
+                      <CheckIcon viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path
+                          d="M2.5 6.5L5 9L9.5 3.5"
+                          stroke="currentColor"
+                          strokeWidth="1.5"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </CheckIcon>
+                    )}
+                    {option.label}
+                  </ContextChip>
+                );
+              })}
+            </ContextChipList>
           </FieldGroup>
 
           {showMemo ? (
@@ -188,4 +260,61 @@ const ErrorText = styled.p`
   font-size: 12px;
   text-align: center;
   margin: 8px 0 16px;
+`;
+
+const QuestionLabelRow = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+`;
+
+const MultiSelectHint = styled.span`
+  font-size: 12px;
+  font-weight: 400;
+  color: #a0a0a0;
+`;
+
+const PlanGrid = styled.div`
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+`;
+
+const PlanOption = styled.button<{ $active: boolean }>`
+  padding: 16px 12px;
+  border-radius: 12px;
+  font-size: 15px;
+  text-align: center;
+  line-height: 1.4;
+  cursor: pointer;
+  border: ${({ $active }) => ($active ? '2px solid #6A5CE6' : '1.5px solid #E5E5E5')};
+  background: ${({ $active }) => ($active ? '#E2DEFF' : '#FFFFFF')};
+  color: ${({ $active }) => ($active ? '#3C3489' : '#767676')};
+  font-weight: ${({ $active }) => ($active ? 600 : 400)};
+`;
+
+const ContextChipList = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+`;
+
+const ContextChip = styled.button<{ $active: boolean }>`
+  display: inline-flex;
+  align-items: center;
+  padding: 10px 16px;
+  border-radius: 999px;
+  font-size: 14px;
+  cursor: pointer;
+  border: ${({ $active }) => ($active ? '2px solid #6A5CE6' : '1.5px solid #E5E5E5')};
+  background: ${({ $active }) => ($active ? '#E2DEFF' : '#FFFFFF')};
+  color: ${({ $active }) => ($active ? '#3C3489' : '#767676')};
+  font-weight: ${({ $active }) => ($active ? 600 : 400)};
+`;
+
+const CheckIcon = styled.svg`
+  width: 14px;
+  height: 14px;
+  margin-right: 4px;
 `;

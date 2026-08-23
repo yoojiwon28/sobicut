@@ -19,6 +19,7 @@ export const OutlinedInput = styled.input`
   background: #fff;
   padding: 0 14px;
   font-size: 14px;
+  font-family: inherit;
   box-sizing: border-box;
   outline: none;
 
@@ -54,6 +55,7 @@ export const OutlinedSelect = styled.select`
   background: #fff;
   padding: 0 14px;
   font-size: 14px;
+  font-family: inherit;
   box-sizing: border-box;
   outline: none;
   appearance: none;
