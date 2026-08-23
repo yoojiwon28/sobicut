@@ -20,6 +20,13 @@ const PLAN_OPTION_COPY: Record<string, string> = {
   '충분한 숙고': '네, 고민하고 샀어요',
 };
 
+// contextTags 는 배열이라 선택 순서가 달라도 구성이 같으면 변경 없음으로 취급한다.
+const isSameTagSet = (a: string[], b: string[]) => {
+  if (a.length !== b.length) return false;
+  const setB = new Set(b);
+  return a.every((tag) => setB.has(tag));
+};
+
 export default function TransactionDetail() {
   const { id } = useParams<{ id: string }>();
   const [searchParams] = useSearchParams();
@@ -57,7 +64,9 @@ export default function TransactionDetail() {
     category !== (tx.category ?? '') ||
     memo !== (tx.description ?? '') ||
     date !== (tx.transaction_date ?? '') ||
-    time !== (tx.transaction_time ?? '');
+    time !== (tx.transaction_time ?? '') ||
+    planTag !== (tx.planTag ?? null) ||
+    !isSameTagSet(contextTags, tx.contextTags ?? []);
 
   const handleSubmit = () => {
     // TODO: updateTransaction API 연동
@@ -133,15 +142,7 @@ export default function TransactionDetail() {
                 <TagChip key={name}>{TAG_LABEL[name]}</TagChip>
               ))}
             </TagChipList>
-            <PencilIcon viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path
-                d="M11.7 2.3a1.2 1.2 0 0 1 1.7 0l.3.3a1.2 1.2 0 0 1 0 1.7l-7.6 7.6-2.6.6.6-2.6 7.6-7.6Z"
-                stroke="currentColor"
-                strokeWidth="1.2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </PencilIcon>
+            <TagEditIcon src={editIcon} alt="" />
           </TagBox>
         ) : (
           <TagEmptyBox type="button" onClick={() => setTagSheetOpen(true)}>
@@ -394,11 +395,9 @@ const TagChip = styled.span`
   border-radius: 999px;
 `;
 
-const PencilIcon = styled.svg`
-  width: 16px;
-  height: 16px;
+const TagEditIcon = styled.img.attrs({ width: 18, height: 18 })`
   flex-shrink: 0;
-  color: #8E8E93;
+  filter: grayscale(1) opacity(0.85);
 `;
 
 const TagEmptyBox = styled.button`
