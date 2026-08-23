@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import styled, { keyframes } from 'styled-components';
@@ -28,12 +28,12 @@ const hasPendingCapture = true;
 
 // GET /reports/scores 더미데이터
 const DUMMY_SCORES = {
-  impulse_score: 30,
+  impulse_score: 50,
   wallet_temperature: {
-    my_temp: 97,
+    my_temp: 110,
     peer_avg_temp: 110,
     diff: 7,
-    level: '매우 안정',
+    level: '과열',
     emoji: '😐',
     message: '지갑이 적당히 데워지고 있어요. 이 흐름을 유지해보세요',
   },
@@ -66,8 +66,23 @@ export default function Home() {
   const gaugeColor = WALLET_GAUGE_COLORS[levelIndex];
   const badgeColor = WALLET_BADGE_COLORS[levelIndex];
 
-  const tempPercent = Math.min(100, Math.max(0, DUMMY_SCORES.wallet_temperature.my_temp));
+  const ARC_LENGTH = 130 * (Math.PI / 2); // 반지름 130, 90° 부채꼴 호 길이 ≈ 204.2
+
+  const MIN_VISIBLE_PERCENT = 8;
+  const tempPercent = DUMMY_SCORES.wallet_temperature.my_temp > 0
+    ? Math.max(MIN_VISIBLE_PERCENT, Math.min(100, DUMMY_SCORES.wallet_temperature.my_temp))
+    : 0;
   const impulsePercent = Math.min(100, Math.max(0, DUMMY_SCORES.impulse_score));
+
+  const tempDashOn = (tempPercent / 100) * ARC_LENGTH;
+  const impulseDashOn = (impulsePercent / 100) * ARC_LENGTH;
+
+  const [animated, setAnimated] = useState(false);
+
+  useEffect(() => {
+    const id = requestAnimationFrame(() => setAnimated(true));
+    return () => cancelAnimationFrame(id);
+  }, []);
 
   const todayTotal = todayExpenses.reduce((sum, tx) => sum + tx.amount, 0);
 
@@ -108,30 +123,34 @@ export default function Home() {
               </linearGradient>
             </defs>
 
-            <path d="M 30 160 A 130 130 0 0 1 160 30" stroke="#ececec" strokeWidth="26" strokeLinecap="round" fill="none" />
-            <path d="M 160 30 A 130 130 0 0 1 290 160" stroke="#ececec" strokeWidth="26" strokeLinecap="round" fill="none" />
+            <path
+              d="M 30 160 A 130 130 0 0 1 160 30 A 130 130 0 0 1 290 160"
+              stroke="#ececec"
+              strokeWidth="26"
+              strokeLinecap="round"
+              fill="none"
+            />
 
             {/* 지갑 온도*/}
-            <path
+            <TempPath
               d="M 30 160 A 130 130 0 0 1 160 30"
               stroke={gaugeColor}
               strokeWidth="26"
               strokeLinecap="round"
               fill="none"
-              pathLength={100}
-              strokeDasharray={`${tempPercent} ${100 - tempPercent}`}
+              strokeDasharray={`${animated ? tempDashOn : 0} ${ARC_LENGTH}`}
             />
 
             {/* 충동 지수 */}
-            <path
+            <ImpulsePath
               d="M 290 160 A 130 130 0 0 0 160 30"
               stroke="url(#impulseGradient)"
               strokeWidth="26"
               strokeLinecap="round"
               fill="none"
-              pathLength={100}
-              strokeDasharray={`${impulsePercent} ${100 - impulsePercent}`}
+              strokeDasharray={`${animated ? impulseDashOn : 0} ${ARC_LENGTH}`}
             />
+            
           </GaugeSvg>
           <CharacterImg src={walletImage} alt={walletStatusText} />
         </GaugeWrap>
@@ -257,6 +276,14 @@ const GaugeWrap = styled.div`
 const GaugeSvg = styled.svg`
   width: 100%;
   height: 100%;
+`;
+
+const TempPath = styled.path`
+  transition: stroke-dasharray 0.9s cubic-bezier(0.22, 1, 0.36, 1);
+`;
+
+const ImpulsePath = styled.path`
+  transition: stroke-dasharray 0.9s cubic-bezier(0.22, 1, 0.36, 1);
 `;
 
 const float = keyframes`
