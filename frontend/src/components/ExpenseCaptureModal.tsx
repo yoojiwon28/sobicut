@@ -1,19 +1,28 @@
 import { useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import Modal from './Modal';
 import DateTimePickerField from './DateTimePickerField';
-import EmotionDonutChart from './EmotionDonutChart';
 import { CATEGORY_OPTIONS } from '../utils/category';
 import { classifyCategory } from '../utils/classifyCategory';
 import { parseSpendingText } from '../utils/parseSpendingText';
 import { formatSlashDateTime } from '../utils/date';
-import { EMOTION_ROWS, EMOTION_MESSAGES, POSITIVE_EMOTIONS, buildEmotionSegments } from '../utils/emotion';
-import { DUMMY_EMOTION_BASE_STATS } from '../mocks/emotion';
-import type { EmotionKey } from '../types/emotion';
 import angleRightIcon from '../assets/images/angle_right.svg';
 
-type Step = 'confirm' | 'edit' | 'emotion' | 'result';
+type PlanTag = 'IMPULSIVE' | 'DELIBERATE';
+type ContextTag = 'STRESS' | 'NO_COMPARE' | 'LONG_VALUE';
+
+const PLAN_OPTIONS: { value: PlanTag; label: string }[] = [
+  { value: 'IMPULSIVE', label: '아니요\n바로 샀어요' },
+  { value: 'DELIBERATE', label: '네\n고민하고 샀어요' },
+];
+
+const CONTEXT_OPTIONS: { value: ContextTag; label: string }[] = [
+  { value: 'STRESS', label: '스트레스 받아서' },
+  { value: 'NO_COMPARE', label: '비교 안 하고' },
+  { value: 'LONG_VALUE', label: '오래 쓸 소비' },
+];
+
+type Step = 'confirm' | 'edit' | 'emotion';
 
 type ExpenseCaptureModalProps = {
   rawText: string;
@@ -21,7 +30,6 @@ type ExpenseCaptureModalProps = {
 };
 
 export default function ExpenseCaptureModal({ rawText, onClose }: ExpenseCaptureModalProps) {
-  const navigate = useNavigate();
   const parsed = useMemo(() => parseSpendingText(rawText), [rawText]);
   const suggestedCategory = useMemo(
     () => (parsed.merchant ? classifyCategory(parsed.merchant) : CATEGORY_OPTIONS[0]),
@@ -34,77 +42,79 @@ export default function ExpenseCaptureModal({ rawText, onClose }: ExpenseCapture
   const [date, setDate] = useState(parsed.date ?? '');
   const [time, setTime] = useState(parsed.time ?? '');
   const [category, setCategory] = useState(suggestedCategory);
-  const [selectedEmotion, setSelectedEmotion] = useState<EmotionKey | null>(null);
+  const [planTag, setPlanTag] = useState<PlanTag | null>(null);
+  const [contextTags, setContextTags] = useState<ContextTag[]>([]);
 
-  const record = (emotion?: EmotionKey) => {
-    // POST /transactions
-    // TODO: 실제 API 연동
-    console.log('POST /transactions', {
-      amount: Number(amount),
-      type: 'expense',
-      category,
-      merchant,
-      transaction_date: date,
-      transaction_time: time,
-      emotion_tag: emotion,
-    });
-    setStep('result');
+  const toggleContextTag = (tag: ContextTag) => {
+    setContextTags((prev) => (prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]));
   };
 
-  if (step === 'result' && selectedEmotion) {
-    const segments = buildEmotionSegments({
-      ...DUMMY_EMOTION_BASE_STATS,
-      [selectedEmotion]: (DUMMY_EMOTION_BASE_STATS[selectedEmotion] ?? 0) + 1,
-    });
-    const dominant = segments[0]?.key ?? selectedEmotion;
-
-    return (
-      <Modal onClose={onClose}>
-        <EmotionDonutChart segments={segments} />
-        <ResultLabel>나는 요즘</ResultLabel>
-        <ResultMessage>{EMOTION_MESSAGES[dominant]}</ResultMessage>
-        <ReportLink
-          type="button"
-          onClick={() => {
-            onClose();
-            navigate('/analysis/report');
-          }}
-        >
-          나의 소비 패턴 바로보기
-        </ReportLink>
-      </Modal>
-    );
-  }
+  const record = () => {
+    // TODO: 실제 API 연동
+    console.log({ planTag, contextTags });
+    onClose();
+  };
 
   if (step === 'emotion') {
     return (
       <Modal>
-        <Title>이 소비를 부른 감정을 골라봐요</Title>
+        <StepCard>
+          <TagTitle>이 소비, 어떤 소비였나요?</TagTitle>
 
-        <EmotionGrid>
-          {EMOTION_ROWS.map((row) => (
-            <EmotionRow key={row.positive}>
-              {[row.positive, row.negative].map((emotion) => (
-                <EmotionButton
-                  key={emotion}
-                  type="button"
-                  $positive={POSITIVE_EMOTIONS.has(emotion)}
-                  $active={selectedEmotion === emotion}
-                  onClick={() => setSelectedEmotion(emotion)}
-                >
-                  {emotion}
-                </EmotionButton>
-              ))}
-            </EmotionRow>
-          ))}
-        </EmotionGrid>
+          <QuestionLabel>이 소비 미리 계획했나요?</QuestionLabel>
+          <PlanGrid>
+            {PLAN_OPTIONS.map((option) => (
+              <PlanOption
+                key={option.value}
+                type="button"
+                $active={planTag === option.value}
+                onClick={() => setPlanTag(option.value)}
+              >
+                {option.label}
+              </PlanOption>
+            ))}
+          </PlanGrid>
 
-        <RecordButton type="button" disabled={!selectedEmotion} onClick={() => record(selectedEmotion ?? undefined)}>
-          기록 완료
-        </RecordButton>
-        <SkipButton type="button" onClick={() => { record(); onClose(); }}>
-          나중에 태그할게요
-        </SkipButton>
+          <QuestionDivider>
+            <QuestionLabelRow>
+              <QuestionLabelText>이 소비는…</QuestionLabelText>
+              <MultiSelectHint>복수 선택</MultiSelectHint>
+            </QuestionLabelRow>
+            <ContextChipList>
+              {CONTEXT_OPTIONS.map((option) => {
+                const active = contextTags.includes(option.value);
+                return (
+                  <ContextChip
+                    key={option.value}
+                    type="button"
+                    $active={active}
+                    onClick={() => toggleContextTag(option.value)}
+                  >
+                    {active && (
+                      <CheckIcon viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path
+                          d="M2.5 6.5L5 9L9.5 3.5"
+                          stroke="currentColor"
+                          strokeWidth="1.5"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </CheckIcon>
+                    )}
+                    {option.label}
+                  </ContextChip>
+                );
+              })}
+            </ContextChipList>
+          </QuestionDivider>
+
+          <RecordButton type="button" disabled={planTag === null} onClick={record}>
+            기록 완료
+          </RecordButton>
+          <SkipButton type="button" onClick={onClose}>
+            나중에 태그할게요
+          </SkipButton>
+        </StepCard>
 
         <StepProgress step={2} />
       </Modal>
@@ -318,10 +328,10 @@ const SkipButton = styled.button`
   background: none;
   border: none;
   text-decoration: underline;
-  color: #888;
-  font-size: 13px;
+  color: #a0a0a0;
+  font-size: 11px;
   text-align: center;
-  padding: 14px 0 0;
+  margin-top: 8px;
   cursor: pointer;
 `;
 
@@ -391,16 +401,20 @@ const CategorySelect = styled.select`
   
 const RecordButton = styled.button`
   width: 100%;
-  height: 48px;
-  border-radius: 12px;
-  background: #fff;
-  color: #6a5ce6;
-  border: 2px solid #6a5ce6;
-  font-weight: 700;
+  margin-top: 20px;
+  padding: 11px;
+  border-radius: 8px;
+  border: none;
+  font-size: 13px;
+  background: #6a5ce6;
+  color: #fff;
+  font-weight: 500;
   cursor: pointer;
 
   &:disabled {
-    opacity: 0.4;
+    background: #f0f0f0;
+    color: #bdbdbd;
+    font-weight: 400;
     cursor: not-allowed;
   }
 `;
@@ -417,30 +431,90 @@ const ChevronIcon = styled.img`
   pointer-events: none;
 `;
 
-const EmotionGrid = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  margin-bottom: 20px;
+const StepCard = styled.div`
+  padding: 18px 16px 14px;
 `;
 
-const EmotionRow = styled.div`
-  display: flex;
-  gap: 10px;
-`;
-
-const EmotionButton = styled.button<{ $positive: boolean; $active: boolean }>`
-  flex: 1;
-  height: 48px;
-  border-radius: 12px;
-  border: 2px solid transparent;
+const TagTitle = styled.h2`
   font-size: 15px;
-  font-weight: 700;
+  font-weight: 500;
+  text-align: center;
+  margin: 0 0 16px;
+`;
+
+const QuestionLabel = styled.div`
+  font-size: 13px;
+  font-weight: 500;
+  margin-bottom: 8px;
+`;
+
+const QuestionLabelRow = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+`;
+
+const QuestionLabelText = styled.span`
+  font-size: 13px;
+  font-weight: 500;
+`;
+
+const MultiSelectHint = styled.span`
+  font-size: 11px;
+  font-weight: 400;
+  color: #a0a0a0;
+`;
+
+const QuestionDivider = styled.div`
+  border-top: 1px solid #f0f0f0;
+  padding-top: 14px;
+  margin-top: 16px;
+`;
+
+const PlanGrid = styled.div`
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+`;
+
+const PlanOption = styled.button<{ $active: boolean }>`
+  padding: 10px 8px;
+  border-radius: 8px;
+  font-size: 12px;
+  text-align: center;
+  line-height: 1.4;
+  white-space: pre-line;
   cursor: pointer;
-  background: ${({ $positive }) => ($positive ? '#E7E4FA' : '#FF8A80')};
-  color: ${({ $positive }) => ($positive ? '#4B3FBF' : '#fff')};
-  border-color: ${({ $active, $positive }) => ($active ? ($positive ? '#6A5CE6' : '#E64545') : 'transparent')};
-  transition: border-color 0.15s ease;
+  border: ${({ $active }) => ($active ? '1.5px solid #6A5CE6' : '1px solid #E5E5E5')};
+  background: ${({ $active }) => ($active ? '#E2DEFF' : '#FFFFFF')};
+  color: ${({ $active }) => ($active ? '#3C3489' : '#767676')};
+  font-weight: ${({ $active }) => ($active ? 500 : 400)};
+`;
+
+const ContextChipList = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+`;
+
+const ContextChip = styled.button<{ $active: boolean }>`
+  display: inline-flex;
+  align-items: center;
+  padding: 7px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  cursor: pointer;
+  border: ${({ $active }) => ($active ? '1.5px solid #6A5CE6' : '1px solid #E5E5E5')};
+  background: ${({ $active }) => ($active ? '#E2DEFF' : '#FFFFFF')};
+  color: ${({ $active }) => ($active ? '#3C3489' : '#767676')};
+  font-weight: ${({ $active }) => ($active ? 500 : 400)};
+`;
+
+const CheckIcon = styled.svg`
+  width: 12px;
+  height: 12px;
+  margin-right: 3px;
 `;
 
 const ProgressWrap = styled.div`
@@ -469,32 +543,3 @@ const ProgressLabel = styled.div`
   color: #999;
 `;
 
-const ResultLabel = styled.div`
-  text-align: center;
-  font-size: 14px;
-  font-weight: 700;
-  color: #6a5ce6;
-  margin: 24px 0 8px;
-`;
-
-const ResultMessage = styled.div`
-  text-align: center;
-  font-size: 16px;
-  font-weight: 800;
-  border: 2px solid #e0ddf7;
-  border-radius: 12px;
-  padding: 14px;
-  margin-bottom: 16px;
-`;
-
-const ReportLink = styled.button`
-  display: block;
-  width: 100%;
-  background: none;
-  border: none;
-  text-decoration: underline;
-  color: #444;
-  font-size: 13px;
-  text-align: center;
-  cursor: pointer;
-`;
