@@ -132,27 +132,29 @@ export default function TransactionDetail() {
         </SelectFieldWrap>
       </StyledFieldGroup>
 
-      <StyledFieldGroup>
-        <StyledFieldLabel>소비 태그</StyledFieldLabel>
-        {planTag ? (
-          <TagBox type="button" onClick={() => setTagSheetOpen(true)}>
-            <TagChipList>
-              <TagChip>{TAG_LABEL[planTag]}</TagChip>
-              {CONTEXT_TAG_NAMES.filter((name) => contextTags.includes(name)).map((name) => (
-                <TagChip key={name}>{TAG_LABEL[name]}</TagChip>
-              ))}
-            </TagChipList>
-            <TagEditIcon src={editIcon} alt="" />
-          </TagBox>
-        ) : (
-          <TagEmptyBox type="button" onClick={() => setTagSheetOpen(true)}>
-            <TagEmptyText>이 소비, 어떤 소비였나요?</TagEmptyText>
-            <PlusIcon viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M8 3v10M3 8h10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-            </PlusIcon>
-          </TagEmptyBox>
-        )}
-      </StyledFieldGroup>
+      {isExpense && (
+        <StyledFieldGroup>
+          <StyledFieldLabel>소비 태그</StyledFieldLabel>
+          {planTag ? (
+            <TagBox type="button" onClick={() => setTagSheetOpen(true)}>
+              <TagChipList>
+                <TagChip>{TAG_LABEL[planTag]}</TagChip>
+                {CONTEXT_TAG_NAMES.filter((name) => contextTags.includes(name)).map((name) => (
+                  <TagChip key={name}>{TAG_LABEL[name]}</TagChip>
+                ))}
+              </TagChipList>
+              <TagEditIcon src={editIcon} alt="" />
+            </TagBox>
+          ) : (
+            <TagEmptyBox type="button" onClick={() => setTagSheetOpen(true)}>
+              <TagEmptyText>이 소비, 어떤 소비였나요?</TagEmptyText>
+              <PlusIcon viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M8 3v10M3 8h10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+              </PlusIcon>
+            </TagEmptyBox>
+          )}
+        </StyledFieldGroup>
+      )}
 
       <StyledFieldGroup>
         <StyledFieldLabel>메모</StyledFieldLabel>
