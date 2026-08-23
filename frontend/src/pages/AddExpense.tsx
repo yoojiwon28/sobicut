@@ -4,7 +4,7 @@ import styled from 'styled-components';
 import BackButton from '../components/BackButton';
 import ChipSelect from '../components/ChipSelect';
 import DateTimePickerField from '../components/DateTimePickerField';
-import { AuthTitle, FormColumn, ButtonPrimary } from '../styles/auth.styles';
+import { AuthTitle, FormColumn, ButtonPrimary, Spinner } from '../styles/auth.styles';
 import {
   FieldGroup,
   FieldLabel,
@@ -21,7 +21,8 @@ import {
   LinkButton,
 } from '../styles/field.styles';
 import { CATEGORY_OPTIONS, CATEGORY_ICONS } from '../utils/category';
-import { parseSpendingText } from '../utils/parseSpendingText';
+import { parseCardMessage } from '../api/transactions';
+import { ApiError } from '../api/client';
 import editIcon from '../assets/images/edit_icon.svg';
 
 type PlanTag = 'IMPULSIVE' | 'DELIBERATE';
@@ -68,22 +69,31 @@ export default function AddExpense() {
     setContextTags((prev) => (prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]));
   };
 
+  const [importing, setImporting] = useState(false);
+
   const handleImport = async () => {
     setImportError('');
+    let text: string;
     try {
-      const text = await navigator.clipboard.readText();
-      const parsed = parseSpendingText(text);
-
-      if (!parsed.amount && !parsed.merchant) {
-        setImportError('문자 형식을 인식하지 못했어요. 직접 입력해주세요.');
-        return;
-      }
-      if (parsed.amount) setAmount(String(parsed.amount));
-      if (parsed.merchant) setMerchant(parsed.merchant);
-      if (parsed.date) setDate(parsed.date);
-      if (parsed.time) setTime(parsed.time);
+        text = await navigator.clipboard.readText();
     } catch {
-      setImportError('클립보드를 읽어올 수 없어요. 문자 내용을 복사한 뒤 다시 시도해주세요.');
+        setImportError('클립보드를 읽어올 수 없어요. 문자 내용을 복사한 뒤 다시 시도해주세요.');
+        return;
+    }
+
+    setImporting(true);
+    try {
+        const parsed = await parseCardMessage(text);
+        setAmount(String(parsed.amount));
+        setMerchant(parsed.merchant);
+        setDate(parsed.transaction_date);
+        setTime(parsed.transaction_time);
+    } catch (err) {
+        setImportError(
+        err instanceof ApiError ? err.message : '문자 형식을 인식하지 못했어요. 직접 입력해주세요.',
+        );
+    } finally {
+        setImporting(false);
     }
   };
 
@@ -136,10 +146,9 @@ export default function AddExpense() {
               <AmountUnit>원</AmountUnit>
             </AmountRow>
           </AmountBox>
-          <ImportButton type="button" onClick={handleImport}>
-            소비내역 가져오기
+          <ImportButton type="button" onClick={handleImport} disabled={importing}>
+            {importing ? <Spinner $size={16} /> : '소비내역 가져오기'}
           </ImportButton>
-          {importError && <ErrorText>{importError}</ErrorText>}
 
           <FieldGroup>
             <FieldLabel>가맹점</FieldLabel>
