@@ -178,14 +178,20 @@ const spin = keyframes`
   }
 `;
 
-export const Spinner = styled.span<{ $size?: number }>`
+export const Spinner = styled.span<{ $size?: number; $color?: string; $trackColor?: string }>`
   display: inline-block;
   width: ${({ $size }) => $size ?? 36}px;
   height: ${({ $size }) => $size ?? 36}px;
-  border: 4px solid #e2deff;
-  border-top-color: #6a5ce6;
+  border: ${({ $size }) => Math.max(2, Math.round(($size ?? 36) / 9))}px solid ${({ $trackColor }) => $trackColor ?? '#e2deff'};
+  border-top-color: ${({ $color }) => $color ?? '#6a5ce6'};
   border-radius: 50%;
   animation: ${spin} 0.6s linear infinite;
+`;
+
+export const PageSpinnerWrap = styled.div`
+  display: flex;
+  justify-content: center;
+  padding: 80px 0;
 `;
 
 export const LoadingOverlay = styled.div`

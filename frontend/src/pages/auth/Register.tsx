@@ -18,6 +18,7 @@ import {
   ButtonDark,
   ButtonPrimary,
   CheckboxRow,
+  Spinner
 } from '../../styles/auth.styles';
 
 const PASSWORD_REGEX = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,12}$/;
@@ -116,7 +117,7 @@ export default function Register() {
             onChange={handleEmailChange}
           />
           <ButtonDark type="button" onClick={handleCheckEmail} disabled={!email || emailChecking}>
-            {emailChecking ? '확인 중...' : '중복 확인'}
+            {emailChecking ? <Spinner $size={16} $color="#fff" $trackColor="rgba(255,255,255,0.4)" /> : '중복 확인'}
           </ButtonDark>
         </InputRow>
         {emailMessage && <HelperText $tone={emailAvailable ? 'ok' : 'error'}>{emailMessage}</HelperText>}

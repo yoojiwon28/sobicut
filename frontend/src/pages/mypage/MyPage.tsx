@@ -14,6 +14,7 @@ import cuttyLv4 from '../../assets/images/character/cutty_lv4_wizard.svg';
 import cuttyLv5 from '../../assets/images/character/cutty_lv5_knight.svg';
 import cuttyLv6 from '../../assets/images/character/cutty_lv6_god.svg';
 import { getLevel, getSettings } from '../../api/users';
+import { PageSpinnerWrap, Spinner } from '../../styles/auth.styles';
 
 const CHARACTER_IMAGES: Record<number, string> = {
   0: cuttyLv0,
@@ -38,9 +39,11 @@ export default function MyPage() {
 
   if (!level || !settings) {
     return (
-      <PageWrap>
-        <LoadingText>불러오는 중...</LoadingText>
-      </PageWrap>
+        <PageWrap>
+        <PageSpinnerWrap>
+            <Spinner />
+        </PageSpinnerWrap>
+        </PageWrap>
     );
   }
 
