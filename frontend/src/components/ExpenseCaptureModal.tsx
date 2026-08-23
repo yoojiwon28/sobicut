@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import Modal from './Modal';
 import DateTimePickerField from './DateTimePickerField';
@@ -22,7 +23,26 @@ const CONTEXT_OPTIONS: { value: ContextTag; label: string }[] = [
   { value: 'LONG_VALUE', label: '오래 쓸 소비' },
 ];
 
-type Step = 'confirm' | 'edit' | 'emotion';
+// TODO: 실제 집계 API 연동 전까지 사용하는 목 데이터
+const MOCK_PATTERN = {
+  planning: { IMPULSIVE: 70, DELIBERATE: 30 },
+  context: { STRESS: 54, NO_COMPARE: 40, LONG_VALUE: 11 },
+};
+
+const PLAN_LABELS: Record<PlanTag, string> = {
+  IMPULSIVE: '바로 샀어요',
+  DELIBERATE: '고민하고 샀어요',
+};
+
+const CONTEXT_LABELS: Record<ContextTag, string> = {
+  STRESS: '스트레스 받아서',
+  NO_COMPARE: '비교 안 하고',
+  LONG_VALUE: '오래 쓸 소비',
+};
+
+const CONTEXT_PATTERN_KEYS: ContextTag[] = ['STRESS', 'NO_COMPARE', 'LONG_VALUE'];
+
+type Step = 'confirm' | 'edit' | 'emotion' | 'result';
 
 type ExpenseCaptureModalProps = {
   rawText: string;
@@ -30,6 +50,7 @@ type ExpenseCaptureModalProps = {
 };
 
 export default function ExpenseCaptureModal({ rawText, onClose }: ExpenseCaptureModalProps) {
+  const navigate = useNavigate();
   const parsed = useMemo(() => parseSpendingText(rawText), [rawText]);
   const suggestedCategory = useMemo(
     () => (parsed.merchant ? classifyCategory(parsed.merchant) : CATEGORY_OPTIONS[0]),
@@ -52,8 +73,68 @@ export default function ExpenseCaptureModal({ rawText, onClose }: ExpenseCapture
   const record = () => {
     // TODO: 실제 API 연동
     console.log({ planTag, contextTags });
-    onClose();
+    setStep('result');
   };
+
+  if (step === 'result') {
+    return (
+      <Modal onClose={onClose}>
+        <PatternTitle>이번 달 소비 패턴</PatternTitle>
+
+        <PlanningSection>
+          <PlanningDonut
+            impulsive={MOCK_PATTERN.planning.IMPULSIVE}
+            deliberate={MOCK_PATTERN.planning.DELIBERATE}
+          />
+          <PlanningLegend>
+            <SectionLabel>계획성</SectionLabel>
+            <LegendRows>
+              <LegendRow>
+                <LegendDot $color="#6A5CE6" />
+                <LegendLabel>{PLAN_LABELS.IMPULSIVE}</LegendLabel>
+                <LegendPercent>{MOCK_PATTERN.planning.IMPULSIVE}%</LegendPercent>
+              </LegendRow>
+              <LegendRow>
+                <LegendDot $color="#C7C1F5" />
+                <LegendLabel>{PLAN_LABELS.DELIBERATE}</LegendLabel>
+                <LegendPercent>{MOCK_PATTERN.planning.DELIBERATE}%</LegendPercent>
+              </LegendRow>
+            </LegendRows>
+          </PlanningLegend>
+        </PlanningSection>
+
+        <ContextSection>
+          <ContextSectionLabelRow>
+            <SectionLabel>소비 특성</SectionLabel>
+            <ContextCaption>(중복 집계)</ContextCaption>
+          </ContextSectionLabelRow>
+          <BarList>
+            {CONTEXT_PATTERN_KEYS.map((key) => (
+              <BarItem key={key}>
+                <BarHeader>
+                  <BarLabel>{CONTEXT_LABELS[key]}</BarLabel>
+                  <BarPercent>{MOCK_PATTERN.context[key]}%</BarPercent>
+                </BarHeader>
+                <BarTrack>
+                  <BarFill $percent={MOCK_PATTERN.context[key]} />
+                </BarTrack>
+              </BarItem>
+            ))}
+          </BarList>
+        </ContextSection>
+
+        <ReportLink
+          type="button"
+          onClick={() => {
+            onClose();
+            navigate('/analysis/report');
+          }}
+        >
+          나의 소비 패턴 바로보기
+        </ReportLink>
+      </Modal>
+    );
+  }
 
   if (step === 'emotion') {
     return (
@@ -232,6 +313,42 @@ function StepProgress({ step }: { step: 1 | 2 }) {
       </ProgressBar>
       <ProgressLabel>{step}/2</ProgressLabel>
     </ProgressWrap>
+  );
+}
+
+const DONUT_SIZE = 88;
+const DONUT_STROKE = 18;
+const DONUT_RADIUS = (DONUT_SIZE - DONUT_STROKE) / 2;
+const DONUT_CENTER = DONUT_SIZE / 2;
+
+function PlanningDonut({ impulsive, deliberate }: { impulsive: number; deliberate: number }) {
+  return (
+    <DonutSvg viewBox={`0 0 ${DONUT_SIZE} ${DONUT_SIZE}`} width={DONUT_SIZE} height={DONUT_SIZE}>
+      <g transform={`rotate(-90 ${DONUT_CENTER} ${DONUT_CENTER})`}>
+        <circle
+          cx={DONUT_CENTER}
+          cy={DONUT_CENTER}
+          r={DONUT_RADIUS}
+          fill="none"
+          stroke="#6A5CE6"
+          strokeWidth={DONUT_STROKE}
+          pathLength={100}
+          strokeDasharray={`${impulsive} ${100 - impulsive}`}
+          strokeDashoffset={0}
+        />
+        <circle
+          cx={DONUT_CENTER}
+          cy={DONUT_CENTER}
+          r={DONUT_RADIUS}
+          fill="none"
+          stroke="#C7C1F5"
+          strokeWidth={DONUT_STROKE}
+          pathLength={100}
+          strokeDasharray={`${deliberate} ${100 - deliberate}`}
+          strokeDashoffset={-impulsive}
+        />
+      </g>
+    </DonutSvg>
   );
 }
 
@@ -541,5 +658,134 @@ const ProgressLabel = styled.div`
   margin-top: 6px;
   font-size: 11px;
   color: #999;
+`;
+
+const PatternTitle = styled.h2`
+  font-size: 16px;
+  font-weight: 700;
+  color: #6a5ce6;
+  text-align: center;
+  margin: 0 0 20px;
+`;
+
+const PlanningSection = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 16px;
+`;
+
+const DonutSvg = styled.svg`
+  flex-shrink: 0;
+`;
+
+const PlanningLegend = styled.div`
+  flex: 1;
+  min-width: 0;
+`;
+
+const SectionLabel = styled.div`
+  font-size: 12px;
+  color: #8e8e93;
+`;
+
+const LegendRows = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+`;
+
+const LegendRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 6px;
+`;
+
+const LegendDot = styled.span<{ $color: string }>`
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: ${({ $color }) => $color};
+`;
+
+const LegendLabel = styled.span`
+  flex: 1;
+  font-size: 13px;
+  color: #3c3c43;
+`;
+
+const LegendPercent = styled.span`
+  font-size: 13px;
+  font-weight: 500;
+  color: #1c1c1e;
+`;
+
+const ContextSection = styled.div`
+  margin-top: 24px;
+`;
+
+const ContextSectionLabelRow = styled.div`
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+`;
+
+const ContextCaption = styled.span`
+  font-size: 11px;
+  color: #b0b0b5;
+`;
+
+const BarList = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-top: 12px;
+`;
+
+const BarItem = styled.div``;
+
+const BarHeader = styled.div`
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 6px;
+`;
+
+const BarLabel = styled.span`
+  font-size: 13px;
+  color: #3c3c43;
+`;
+
+const BarPercent = styled.span`
+  font-size: 13px;
+  font-weight: 500;
+  color: #1c1c1e;
+`;
+
+const BarTrack = styled.div`
+  height: 10px;
+  border-radius: 999px;
+  background: #e5e5ea;
+  overflow: hidden;
+`;
+
+const BarFill = styled.div<{ $percent: number }>`
+  height: 100%;
+  width: ${({ $percent }) => $percent}%;
+  border-radius: 999px;
+  background: #6a5ce6;
+`;
+
+const ReportLink = styled.button`
+  display: block;
+  width: 100%;
+  background: none;
+  border: none;
+  text-decoration: underline;
+  color: #6a5ce6;
+  font-size: 13px;
+  text-align: center;
+  margin-top: 20px;
+  cursor: pointer;
 `;
 
