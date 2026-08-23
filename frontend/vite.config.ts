@@ -6,8 +6,19 @@ import { VitePWA } from 'vite-plugin-pwa';
 export default defineConfig({
   plugins: [
     react(),
+
     VitePWA({
+      strategies: 'injectManifest',
+      srcDir: 'src',
+      filename: 'sw.ts',
       registerType: 'autoUpdate',
+      devOptions: {
+        enabled: true,
+        type: 'module',
+      },
+      injectManifest: {
+        globPatterns: ['**/*.{js,css,html,svg,png,ico}'],
+      },
       includeAssets: ['favicon.svg'],
       manifest: {
         name: '소비컷',
@@ -18,23 +29,12 @@ export default defineConfig({
         display: 'standalone',
         start_url: '/',
         icons: [
-          {
-            src: '/icons/icon-192.png',
-            sizes: '192x192',
-            type: 'image/png',
-          },
-          {
-            src: '/icons/icon-512.png',
-            sizes: '512x512',
-            type: 'image/png',
-          },
+          { src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },
+          { src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png' },
         ],
       },
-      workbox: {
-        // 앱 껍데기(정적 리소스)만 캐싱, 데이터는 항상 네트워크에서 최신으로
-        globPatterns: ['**/*.{js,css,html,svg,png,ico}'],
-      },
     }),
+    
   ],
   resolve: {
     alias: {
