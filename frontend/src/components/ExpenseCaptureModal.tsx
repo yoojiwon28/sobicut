@@ -13,13 +13,12 @@ import angleRightIcon from '../assets/images/angle_right.svg';
 // Q1 버튼 전용 카피(질문-답변 프레이밍). 태그 표현과 무관한 UI 문구라 TAG_LABEL과 분리한다.
 const PLAN_OPTION_COPY: Record<string, string> = {
   즉흥성: '아니요\n바로 샀어요',
-  '충분한 숙고': '네\n고민하고 샀어요',
+  충분한숙고: '네\n고민하고 샀어요',
 };
 
-// TODO: 실제 집계 API 연동 전까지 사용하는 목 데이터
 const MOCK_PATTERN: { planning: Record<string, number>; context: Record<string, number> } = {
-  planning: { 즉흥성: 70, '충분한 숙고': 30 },
-  context: { 스트레스: 54, '비교 회피': 40, '장기적 가치': 11 },
+  planning: { 즉흥성: 70, 충분한숙고: 30 },
+  context: { 스트레스: 54, 비교회피: 40, 장기적가치: 11 },
 };
 
 type Step = 'confirm' | 'edit' | 'emotion' | 'result';

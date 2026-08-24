@@ -1,5 +1,6 @@
-import { useState, type FormEvent } from 'react';
+import { useMemo, useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import styled from 'styled-components';
 import BackButton from '../components/BackButton';
 import ChipSelect from '../components/ChipSelect';
@@ -23,14 +24,15 @@ import {
   LinkButton,
 } from '../styles/field.styles';
 import { CATEGORY_OPTIONS, CATEGORY_ICONS } from '../utils/category';
-import { parseCardMessage } from '../api/transactions';
+import { parseCardMessage, createTransaction, tagTransactionEmotions } from '../api/transactions';
+import { getEmotions } from '../api/emotions';
 import { ApiError } from '../api/client';
 import editIcon from '../assets/images/edit_icon.svg';
 
 // Q1 버튼 전용 카피(질문-답변 프레이밍). 태그 표현과 무관한 UI 문구라 TAG_LABEL과 분리한다.
 const PLAN_OPTION_COPY: Record<string, string> = {
   즉흥성: '아니요, 바로 샀어요',
-  '충분한 숙고': '네, 고민하고 샀어요',
+  충분한숙고: '네, 고민하고 샀어요',
 };
 
 const AMOUNT_STEP = 5000;
@@ -53,6 +55,16 @@ export default function AddExpense() {
   const [importError, setImportError] = useState('');
   const [showMemo, setShowMemo] = useState(false);
   const [memo, setMemo] = useState('');
+
+  const { data: emotions = [] } = useQuery({
+    queryKey: ['emotions'],
+    queryFn: getEmotions,
+  });
+
+  const emotionIdByName = useMemo(
+    () => Object.fromEntries(emotions.map((tag) => [tag.name, tag.id])),
+    [emotions],
+  );
 
   const canSubmit = Number(amount) > 0 && merchant.trim().length > 0 && category.length > 0;
 
@@ -88,152 +100,165 @@ export default function AddExpense() {
     }
   };
 
-  const handleSubmit = (e: FormEvent) => {
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState('');
+
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    if (!canSubmit) return;
+    if (!canSubmit || submitting) return;
 
-    // POST /transactions
-    // TODO: 실제 API 연동. planTag/contextTags(한글 name) → GET /emotions 조회 결과의 emotion_tag_ids 로 매핑 필요
-    const payload = {
-      amount: Number(amount),
-      type: 'expense' as const,
-      category,
-      merchant,
-      description: memo,
-      transaction_date: date,
-      transaction_time: time,
-      planTag,
-      contextTags,
-    };
-    console.log('POST /transactions', payload);
+    setSubmitting(true);
+    setSubmitError('');
+    try {
+      const { id } = await createTransaction({
+        amount: Number(amount),
+        type: 'expense',
+        category,
+        merchant,
+        description: memo,
+        transaction_date: date,
+        transaction_time: time,
+      });
 
-    navigate('/');
+      const tagNames = [planTag, ...contextTags].filter((name): name is string => name !== null);
+      const emotionTagIds = tagNames
+        .map((name) => emotionIdByName[name])
+        .filter((id): id is number => id !== undefined);
+
+      if (emotionTagIds.length > 0) {
+        await tagTransactionEmotions(id, emotionTagIds);
+      }
+
+      navigate('/');
+    } catch (err) {
+      setSubmitError(err instanceof ApiError ? err.message : '등록에 실패했어요. 다시 시도해주세요.');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
-    
-      <form onSubmit={handleSubmit}>
-        <FormColumn>
-          <div>
-            <BackButton to="/" />
-            <AuthTitle $size={20}>지출 추가</AuthTitle>
+    <form onSubmit={handleSubmit}>
+      <FormColumn>
+        <div>
+          <BackButton to="/" />
+          <AuthTitle $size={20}>지출 추가</AuthTitle>
 
-            <AmountBox>
-              <AmountLabel>지출 금액</AmountLabel>
-              <AmountRow>
-                <StepButton type="button" onClick={() => adjustAmount(-AMOUNT_STEP)} aria-label="5000원 감소">
-                  −
-                </StepButton>
-                <AmountInput
-                  type="number"
-                  inputMode="numeric"
-                  step={AMOUNT_STEP}
-                  placeholder="0"
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
-                />
-                <StepButton type="button" onClick={() => adjustAmount(AMOUNT_STEP)} aria-label="5000원 증가">
-                  +
-                </StepButton>
-                <AmountUnit>원</AmountUnit>
-              </AmountRow>
-            </AmountBox>
-            <ImportButton type="button" onClick={handleImport} disabled={importing}>
-              {importing ? <Spinner $size={16} /> : '소비내역 가져오기'}
-            </ImportButton>
-            {importError && <ErrorText>{importError}</ErrorText>}
-
-            <FieldGroup>
-              <FieldLabel>가맹점</FieldLabel>
-              <IconFieldWrap>
-                <OutlinedInput value={merchant} onChange={(e) => setMerchant(e.target.value)} />
-                <button type="button" aria-label="가맹점 수정" tabIndex={-1}>
-                  <img src={editIcon} alt="" width={18} height={18} />
-                </button>
-              </IconFieldWrap>
-            </FieldGroup>
-
-            <FieldGroup>
-              <FieldLabel>결제일시</FieldLabel>
-              <DateTimePickerField
-                  date={date}
-                  time={time}
-                  onChange={(d, t) => {
-                  setDate(d);
-                  setTime(t);
-                  }}
+          <AmountBox>
+            <AmountLabel>지출 금액</AmountLabel>
+            <AmountRow>
+              <StepButton type="button" onClick={() => adjustAmount(-AMOUNT_STEP)} aria-label="5000원 감소">
+                −
+              </StepButton>
+              <AmountInput
+                type="number"
+                inputMode="numeric"
+                step={AMOUNT_STEP}
+                placeholder="0"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
               />
-            </FieldGroup>
+              <StepButton type="button" onClick={() => adjustAmount(AMOUNT_STEP)} aria-label="5000원 증가">
+                +
+              </StepButton>
+              <AmountUnit>원</AmountUnit>
+            </AmountRow>
+          </AmountBox>
+          <ImportButton type="button" onClick={handleImport} disabled={importing}>
+            {importing ? <Spinner $size={16} /> : '소비내역 가져오기'}
+          </ImportButton>
+          {importError && <ErrorText>{importError}</ErrorText>}
 
-            <FieldGroup>
-              <FieldLabel>카테고리</FieldLabel>
-              <ChipSelect
-                options={CATEGORY_OPTIONS}
-                value={category}
-                onChange={setCategory}
-                getIcon={(option) => CATEGORY_ICONS[option]}
-              />
-            </FieldGroup>
+          <FieldGroup>
+            <FieldLabel>가맹점</FieldLabel>
+            <IconFieldWrap>
+              <OutlinedInput value={merchant} onChange={(e) => setMerchant(e.target.value)} />
+              <button type="button" aria-label="가맹점 수정" tabIndex={-1}>
+                <img src={editIcon} alt="" width={18} height={18} />
+              </button>
+            </IconFieldWrap>
+          </FieldGroup>
 
-            <FieldGroup>
-              <FieldLabel>소비 태그</FieldLabel>
-              {planTag ? (
-                <TagBox type="button" onClick={() => setTagSheetOpen(true)}>
-                  <TagChipList>
-                    <TagChip>{TAG_LABEL[planTag]}</TagChip>
-                    {CONTEXT_TAG_NAMES.filter((name) => contextTags.includes(name)).map((name) => (
-                      <TagChip key={name}>{TAG_LABEL[name]}</TagChip>
-                    ))}
-                  </TagChipList>
-                  <TagEditIcon src={editIcon} alt="" />
-                </TagBox>
-              ) : (
-                <TagEmptyBox type="button" onClick={() => setTagSheetOpen(true)}>
-                  <TagEmptyText>이 소비, 어떤 소비였나요?</TagEmptyText>
-                  <PlusIcon viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M8 3v10M3 8h10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                  </PlusIcon>
-                </TagEmptyBox>
-              )}
-            </FieldGroup>
+          <FieldGroup>
+            <FieldLabel>결제일시</FieldLabel>
+            <DateTimePickerField
+                date={date}
+                time={time}
+                onChange={(d, t) => {
+                setDate(d);
+                setTime(t);
+                }}
+            />
+          </FieldGroup>
 
-            {showMemo ? (
-              <FieldGroup>
-                <FieldLabel>메모</FieldLabel>
-                <OutlinedTextarea
-                  placeholder="메모를 작성해주세요"
-                  value={memo}
-                  onChange={(e) => setMemo(e.target.value)}
-                />
-              </FieldGroup>
+          <FieldGroup>
+            <FieldLabel>카테고리</FieldLabel>
+            <ChipSelect
+              options={CATEGORY_OPTIONS}
+              value={category}
+              onChange={setCategory}
+              getIcon={(option) => CATEGORY_ICONS[option]}
+            />
+          </FieldGroup>
+
+          <FieldGroup>
+            <FieldLabel>소비 태그</FieldLabel>
+            {planTag ? (
+              <TagBox type="button" onClick={() => setTagSheetOpen(true)}>
+                <TagChipList>
+                  <TagChip>{TAG_LABEL[planTag]}</TagChip>
+                  {CONTEXT_TAG_NAMES.filter((name) => contextTags.includes(name)).map((name) => (
+                    <TagChip key={name}>{TAG_LABEL[name]}</TagChip>
+                  ))}
+                </TagChipList>
+                <TagEditIcon src={editIcon} alt="" />
+              </TagBox>
             ) : (
-              <LinkButton type="button" onClick={() => setShowMemo(true)}>
-                + 메모 추가
-              </LinkButton>
+              <TagEmptyBox type="button" onClick={() => setTagSheetOpen(true)}>
+                <TagEmptyText>이 소비, 어떤 소비였나요?</TagEmptyText>
+                <PlusIcon viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M8 3v10M3 8h10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                </PlusIcon>
+              </TagEmptyBox>
             )}
-          </div>
+          </FieldGroup>
 
-          <ButtonPrimary type="submit" disabled={!canSubmit}>
-            등록하기
-          </ButtonPrimary>
-        </FormColumn>
+          {showMemo ? (
+            <FieldGroup>
+              <FieldLabel>메모</FieldLabel>
+              <OutlinedTextarea
+                placeholder="메모를 작성해주세요"
+                value={memo}
+                onChange={(e) => setMemo(e.target.value)}
+              />
+            </FieldGroup>
+          ) : (
+            <LinkButton type="button" onClick={() => setShowMemo(true)}>
+              + 메모 추가
+            </LinkButton>
+          )}
 
-        {tagSheetOpen && (
-          <TagEditSheet
-            initialPlanTag={planTag}
-            initialContextTags={contextTags}
-            onClose={() => setTagSheetOpen(false)}
-            onSave={(nextPlanTag, nextContextTags) => {
-                setPlanTag(nextPlanTag);
-                setContextTags(nextContextTags);
-                setTagSheetOpen(false);
+          {submitError && <ErrorText>{submitError}</ErrorText>}
+        </div>
+
+        <ButtonPrimary type="submit" disabled={!canSubmit || submitting}>
+          {submitting ? <Spinner $size={18} $color="#fff" $trackColor="rgba(255,255,255,0.4)" /> : '등록하기'}
+        </ButtonPrimary>
+      </FormColumn>
+
+      {tagSheetOpen && (
+        <TagEditSheet
+          initialPlanTag={planTag}
+          initialContextTags={contextTags}
+          onClose={() => setTagSheetOpen(false)}
+          onSave={(nextPlanTag, nextContextTags) => {
+            setPlanTag(nextPlanTag);
+            setContextTags(nextContextTags);
+            setTagSheetOpen(false);
           }}
         />
       )}
-      </form>
-
-     
-    
+    </form>
   );
 }
 

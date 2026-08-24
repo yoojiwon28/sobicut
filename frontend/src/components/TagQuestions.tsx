@@ -2,15 +2,15 @@ import styled from 'styled-components';
 
 // 태그 식별자는 백엔드 emotion_tags 의 한글 name 문자열을 그대로 쓴다.
 // TODO: GET /emotions 의 type 필드로 계획성/소비특성 그룹을 구분하게 되면 아래 두 배열은 제거한다.
-export const PLAN_TAG_NAMES: string[] = ['즉흥성', '충분한 숙고'];
-export const CONTEXT_TAG_NAMES: string[] = ['스트레스', '비교 회피', '장기적 가치'];
+export const PLAN_TAG_NAMES: string[] = ['즉흥성', '충분한숙고'];
+export const CONTEXT_TAG_NAMES: string[] = ['스트레스', '비교회피', '장기적가치'];
 
 export const TAG_LABEL: Record<string, string> = {
   즉흥성: '바로 샀어요',
-  '충분한 숙고': '고민하고 샀어요',
+  충분한숙고: '고민하고 샀어요',
   스트레스: '스트레스 받아서',
-  '비교 회피': '비교 안 하고',
-  '장기적 가치': '오래 쓸 소비',
+  비교회피: '비교 안 하고',
+  장기적가치: '오래 쓸 소비',
 };
 
 type TagQuestionsProps = {
