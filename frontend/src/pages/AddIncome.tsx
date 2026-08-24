@@ -10,7 +10,6 @@ import styled from 'styled-components';
 import {
   FieldGroup,
   FieldLabel,
-  OutlinedInput,
   OutlinedTextarea,
   AmountBox,
   AmountLabel,
@@ -126,8 +125,8 @@ export default function AddIncome() {
           {error && <ErrorText>{error}</ErrorText>}
         </div>
 
-        <ButtonPrimary type="submit" disabled={!canSubmit}>
-          등록하기
+        <ButtonPrimary type="submit" disabled={!canSubmit || submitting}>
+          {submitting ? <Spinner $size={18} $color="#fff" $trackColor="rgba(255,255,255,0.4)" /> : '등록하기'}
         </ButtonPrimary>
       </FormColumn>
     </form>

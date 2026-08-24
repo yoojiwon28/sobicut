@@ -4,6 +4,8 @@ import styled from 'styled-components';
 import BackButton from '../components/BackButton';
 import ChipSelect from '../components/ChipSelect';
 import DateTimePickerField from '../components/DateTimePickerField';
+import BottomSheet from '../components/BottomSheet';
+import TagQuestions, { TAG_LABEL, CONTEXT_TAG_NAMES } from '../components/TagQuestions';
 import { AuthTitle, FormColumn, ButtonPrimary, Spinner } from '../styles/auth.styles';
 import {
   FieldGroup,
@@ -21,7 +23,6 @@ import {
   LinkButton,
 } from '../styles/field.styles';
 import { CATEGORY_OPTIONS, CATEGORY_ICONS } from '../utils/category';
-import { TAG_LABEL, PLAN_TAG_NAMES, CONTEXT_TAG_NAMES } from '../components/TagQuestions';
 import { parseCardMessage } from '../api/transactions';
 import { ApiError } from '../api/client';
 import editIcon from '../assets/images/edit_icon.svg';
@@ -48,6 +49,7 @@ export default function AddExpense() {
   const [category, setCategory] = useState('');
   const [planTag, setPlanTag] = useState<string | null>(null);
   const [contextTags, setContextTags] = useState<string[]>([]);
+  const [tagSheetOpen, setTagSheetOpen] = useState(false);
   const [importError, setImportError] = useState('');
   const [showMemo, setShowMemo] = useState(false);
   const [memo, setMemo] = useState('');
@@ -56,10 +58,6 @@ export default function AddExpense() {
 
   const adjustAmount = (delta: number) => {
     setAmount((prev) => String(Math.max(0, Number(prev || 0) + delta)));
-  };
-
-  const toggleContextTag = (tag: string) => {
-    setContextTags((prev) => (prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]));
   };
 
   const [importing, setImporting] = useState(false);
@@ -113,138 +111,161 @@ export default function AddExpense() {
   };
 
   return (
-    <form onSubmit={handleSubmit}>
-      <FormColumn>
-        <div>
-          <BackButton to="/" />
-          <AuthTitle $size={20}>지출 추가</AuthTitle>
+    
+      <form onSubmit={handleSubmit}>
+        <FormColumn>
+          <div>
+            <BackButton to="/" />
+            <AuthTitle $size={20}>지출 추가</AuthTitle>
 
-          <AmountBox>
-            <AmountLabel>지출 금액</AmountLabel>
-            <AmountRow>
-              <StepButton type="button" onClick={() => adjustAmount(-AMOUNT_STEP)} aria-label="5000원 감소">
-                −
-              </StepButton>
-              <AmountInput
-                type="number"
-                inputMode="numeric"
-                step={AMOUNT_STEP}
-                placeholder="0"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-              />
-              <StepButton type="button" onClick={() => adjustAmount(AMOUNT_STEP)} aria-label="5000원 증가">
-                +
-              </StepButton>
-              <AmountUnit>원</AmountUnit>
-            </AmountRow>
-          </AmountBox>
-          <ImportButton type="button" onClick={handleImport} disabled={importing}>
-            {importing ? <Spinner $size={16} /> : '소비내역 가져오기'}
-          </ImportButton>
+            <AmountBox>
+              <AmountLabel>지출 금액</AmountLabel>
+              <AmountRow>
+                <StepButton type="button" onClick={() => adjustAmount(-AMOUNT_STEP)} aria-label="5000원 감소">
+                  −
+                </StepButton>
+                <AmountInput
+                  type="number"
+                  inputMode="numeric"
+                  step={AMOUNT_STEP}
+                  placeholder="0"
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                />
+                <StepButton type="button" onClick={() => adjustAmount(AMOUNT_STEP)} aria-label="5000원 증가">
+                  +
+                </StepButton>
+                <AmountUnit>원</AmountUnit>
+              </AmountRow>
+            </AmountBox>
+            <ImportButton type="button" onClick={handleImport} disabled={importing}>
+              {importing ? <Spinner $size={16} /> : '소비내역 가져오기'}
+            </ImportButton>
+            {importError && <ErrorText>{importError}</ErrorText>}
 
-          <FieldGroup>
-            <FieldLabel>가맹점</FieldLabel>
-            <IconFieldWrap>
-              <OutlinedInput value={merchant} onChange={(e) => setMerchant(e.target.value)} />
-              <button type="button" aria-label="가맹점 수정" tabIndex={-1}>
-                <img src={editIcon} alt="" width={18} height={18} />
-              </button>
-            </IconFieldWrap>
-          </FieldGroup>
-
-          <FieldGroup>
-            <FieldLabel>결제일시</FieldLabel>
-            <DateTimePickerField
-                date={date}
-                time={time}
-                onChange={(d, t) => {
-                setDate(d);
-                setTime(t);
-                }}
-            />
-          </FieldGroup>
-
-          <FieldGroup>
-            <FieldLabel>카테고리</FieldLabel>
-            <ChipSelect
-              options={CATEGORY_OPTIONS}
-              value={category}
-              onChange={setCategory}
-              getIcon={(option) => CATEGORY_ICONS[option]}
-            />
-          </FieldGroup>
-
-          <FieldGroup>
-            <FieldLabel>이 소비 미리 계획했나요?</FieldLabel>
-            <PlanGrid>
-              {PLAN_TAG_NAMES.map((name) => (
-                <PlanOption
-                  key={name}
-                  type="button"
-                  $active={planTag === name}
-                  onClick={() => setPlanTag(name)}
-                >
-                  {PLAN_OPTION_COPY[name]}
-                </PlanOption>
-              ))}
-            </PlanGrid>
-          </FieldGroup>
-
-          <FieldGroup>
-            <QuestionLabelRow>
-              <FieldLabel>이 소비는…</FieldLabel>
-              <MultiSelectHint>복수 선택</MultiSelectHint>
-            </QuestionLabelRow>
-            <ContextChipList>
-              {CONTEXT_TAG_NAMES.map((name) => {
-                const active = contextTags.includes(name);
-                return (
-                  <ContextChip
-                    key={name}
-                    type="button"
-                    $active={active}
-                    onClick={() => toggleContextTag(name)}
-                  >
-                    {active && (
-                      <CheckIcon viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path
-                          d="M2.5 6.5L5 9L9.5 3.5"
-                          stroke="currentColor"
-                          strokeWidth="1.5"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                      </CheckIcon>
-                    )}
-                    {TAG_LABEL[name]}
-                  </ContextChip>
-                );
-              })}
-            </ContextChipList>
-          </FieldGroup>
-
-          {showMemo ? (
             <FieldGroup>
-              <FieldLabel>메모</FieldLabel>
-              <OutlinedTextarea
-                placeholder="메모를 작성해주세요"
-                value={memo}
-                onChange={(e) => setMemo(e.target.value)}
+              <FieldLabel>가맹점</FieldLabel>
+              <IconFieldWrap>
+                <OutlinedInput value={merchant} onChange={(e) => setMerchant(e.target.value)} />
+                <button type="button" aria-label="가맹점 수정" tabIndex={-1}>
+                  <img src={editIcon} alt="" width={18} height={18} />
+                </button>
+              </IconFieldWrap>
+            </FieldGroup>
+
+            <FieldGroup>
+              <FieldLabel>결제일시</FieldLabel>
+              <DateTimePickerField
+                  date={date}
+                  time={time}
+                  onChange={(d, t) => {
+                  setDate(d);
+                  setTime(t);
+                  }}
               />
             </FieldGroup>
-          ) : (
-            <LinkButton type="button" onClick={() => setShowMemo(true)}>
-              + 메모 추가
-            </LinkButton>
-          )}
-        </div>
 
-        <ButtonPrimary type="submit" disabled={!canSubmit}>
-          등록하기
-        </ButtonPrimary>
-      </FormColumn>
-    </form>
+            <FieldGroup>
+              <FieldLabel>카테고리</FieldLabel>
+              <ChipSelect
+                options={CATEGORY_OPTIONS}
+                value={category}
+                onChange={setCategory}
+                getIcon={(option) => CATEGORY_ICONS[option]}
+              />
+            </FieldGroup>
+
+            <FieldGroup>
+              <FieldLabel>소비 태그</FieldLabel>
+              {planTag ? (
+                <TagBox type="button" onClick={() => setTagSheetOpen(true)}>
+                  <TagChipList>
+                    <TagChip>{TAG_LABEL[planTag]}</TagChip>
+                    {CONTEXT_TAG_NAMES.filter((name) => contextTags.includes(name)).map((name) => (
+                      <TagChip key={name}>{TAG_LABEL[name]}</TagChip>
+                    ))}
+                  </TagChipList>
+                  <TagEditIcon src={editIcon} alt="" />
+                </TagBox>
+              ) : (
+                <TagEmptyBox type="button" onClick={() => setTagSheetOpen(true)}>
+                  <TagEmptyText>이 소비, 어떤 소비였나요?</TagEmptyText>
+                  <PlusIcon viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M8 3v10M3 8h10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                  </PlusIcon>
+                </TagEmptyBox>
+              )}
+            </FieldGroup>
+
+            {showMemo ? (
+              <FieldGroup>
+                <FieldLabel>메모</FieldLabel>
+                <OutlinedTextarea
+                  placeholder="메모를 작성해주세요"
+                  value={memo}
+                  onChange={(e) => setMemo(e.target.value)}
+                />
+              </FieldGroup>
+            ) : (
+              <LinkButton type="button" onClick={() => setShowMemo(true)}>
+                + 메모 추가
+              </LinkButton>
+            )}
+          </div>
+
+          <ButtonPrimary type="submit" disabled={!canSubmit}>
+            등록하기
+          </ButtonPrimary>
+        </FormColumn>
+
+        {tagSheetOpen && (
+          <TagEditSheet
+            initialPlanTag={planTag}
+            initialContextTags={contextTags}
+            onClose={() => setTagSheetOpen(false)}
+            onSave={(nextPlanTag, nextContextTags) => {
+                setPlanTag(nextPlanTag);
+                setContextTags(nextContextTags);
+                setTagSheetOpen(false);
+          }}
+        />
+      )}
+      </form>
+
+     
+    
+  );
+}
+
+type TagEditSheetProps = {
+  initialPlanTag: string | null;
+  initialContextTags: string[];
+  onClose: () => void;
+  onSave: (planTag: string | null, contextTags: string[]) => void;
+};
+
+function TagEditSheet({ initialPlanTag, initialContextTags, onClose, onSave }: TagEditSheetProps) {
+  const [planTag, setPlanTag] = useState(initialPlanTag);
+  const [contextTags, setContextTags] = useState(initialContextTags);
+
+  const toggleContextTag = (tag: string) => {
+    setContextTags((prev) => (prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]));
+  };
+
+  return (
+    <BottomSheet onClose={onClose}>
+      <TagQuestions
+        title="이 소비, 어떤 소비였나요?"
+        planTag={planTag}
+        contextTags={contextTags}
+        planOptionCopy={PLAN_OPTION_COPY}
+        onChangePlanTag={setPlanTag}
+        onToggleContextTag={toggleContextTag}
+      />
+      <TagSaveButton type="button" disabled={planTag === null} onClick={() => onSave(planTag, contextTags)}>
+        저장
+      </TagSaveButton>
+    </BottomSheet>
   );
 }
 
@@ -255,59 +276,86 @@ const ErrorText = styled.p`
   margin: 8px 0 16px;
 `;
 
-const QuestionLabelRow = styled.div`
+const TagBox = styled.button`
   display: flex;
   align-items: center;
   justify-content: space-between;
-`;
-
-const MultiSelectHint = styled.span`
-  font-size: 12px;
-  font-weight: 400;
-  color: #a0a0a0;
-`;
-
-const PlanGrid = styled.div`
-  display: grid;
-  grid-template-columns: 1fr 1fr;
   gap: 10px;
-`;
-
-const PlanOption = styled.button<{ $active: boolean }>`
-  padding: 16px 12px;
-  border-radius: 12px;
-  font-size: 15px;
-  text-align: center;
-  line-height: 1.4;
+  width: 100%;
+  min-height: 48px;
+  background: #fff;
+  border: 2px solid #6a5ce6;
+  border-radius: 10px;
+  padding: 10px 14px;
   cursor: pointer;
-  border: ${({ $active }) => ($active ? '2px solid #6A5CE6' : '1.5px solid #E5E5E5')};
-  background: ${({ $active }) => ($active ? '#E2DEFF' : '#FFFFFF')};
-  color: ${({ $active }) => ($active ? '#3C3489' : '#767676')};
-  font-weight: ${({ $active }) => ($active ? 600 : 400)};
+  text-align: left;
+  box-sizing: border-box;
 `;
 
-const ContextChipList = styled.div`
+const TagChipList = styled.div`
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 8px;
+  gap: 6px;
 `;
 
-const ContextChip = styled.button<{ $active: boolean }>`
+const TagChip = styled.span`
   display: inline-flex;
   align-items: center;
-  padding: 10px 16px;
+  background: #e2deff;
+  color: #3c3489;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 5px 10px;
   border-radius: 999px;
-  font-size: 14px;
-  cursor: pointer;
-  border: ${({ $active }) => ($active ? '2px solid #6A5CE6' : '1.5px solid #E5E5E5')};
-  background: ${({ $active }) => ($active ? '#E2DEFF' : '#FFFFFF')};
-  color: ${({ $active }) => ($active ? '#3C3489' : '#767676')};
-  font-weight: ${({ $active }) => ($active ? 600 : 400)};
 `;
 
-const CheckIcon = styled.svg`
-  width: 14px;
-  height: 14px;
-  margin-right: 4px;
+const TagEditIcon = styled.img.attrs({ width: 18, height: 18 })`
+  flex-shrink: 0;
+`;
+
+const TagEmptyBox = styled.button`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  height: 48px;
+  background: #fff;
+  border: 1.5px dashed #c7c1f5;
+  border-radius: 10px;
+  padding: 0 14px;
+  cursor: pointer;
+  text-align: left;
+  box-sizing: border-box;
+`;
+
+const TagEmptyText = styled.span`
+  font-size: 14px;
+  color: #6a5ce6;
+`;
+
+const PlusIcon = styled.svg`
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  color: #6a5ce6;
+`;
+
+const TagSaveButton = styled.button`
+  width: 100%;
+  margin-top: 20px;
+  padding: 14px;
+  border: none;
+  border-radius: 12px;
+  background: #6a5ce6;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+
+  &:disabled {
+    background: #f0f0f0;
+    color: #bdbdbd;
+    cursor: not-allowed;
+  }
 `;

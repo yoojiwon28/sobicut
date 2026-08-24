@@ -275,10 +275,3 @@ const MenuList = styled.div`
     border-bottom: 1px solid #eee;
   }
 `;
-
-const LoadingText = styled.p`
-  text-align: center;
-  color: #999;
-  font-size: 13px;
-  padding: 60px 0;
-`;
