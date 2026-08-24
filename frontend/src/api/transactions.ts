@@ -52,3 +52,10 @@ export function createTransaction(payload: TransactionCreatePayload) {
     }),
   });
 }
+
+export function tagTransactionEmotions(transactionId: number, emotionTagIds: number[]) {
+  return apiFetch<{ message: string }>(`/transactions/${transactionId}/emotions`, {
+    method: 'POST',
+    body: JSON.stringify({ emotion_tag_ids: emotionTagIds }),
+  });
+}

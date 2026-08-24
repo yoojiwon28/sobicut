@@ -17,7 +17,7 @@ import editIcon from '../../assets/images/edit_icon.svg';
 // Q1 버튼 전용 카피(질문-답변 프레이밍). 태그 표현과 무관한 UI 문구라 TAG_LABEL과 분리한다.
 const PLAN_OPTION_COPY: Record<string, string> = {
   즉흥성: '아니요, 바로 샀어요',
-  '충분한 숙고': '네, 고민하고 샀어요',
+  충분한숙고: '네, 고민하고 샀어요',
 };
 
 // contextTags 는 배열이라 선택 순서가 달라도 구성이 같으면 변경 없음으로 취급한다.
