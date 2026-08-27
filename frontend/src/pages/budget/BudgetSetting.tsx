@@ -23,6 +23,7 @@ import {
   type Budget,
 } from '../../api/budget';
 import { ApiError } from '../../api/client';
+import { formatWon } from '../../utils/currency';
 import type { BudgetDistribution } from '../../types/budget';
 
 const TOTAL_STEP = 10000;
@@ -64,7 +65,7 @@ export default function BudgetSetting() {
   });
 
   const equalWeekAmount = calcEvenWeekly(total);
-  const totalPercent = (total / TOTAL_MAX) * 100;
+  const totalPercent = Math.min(100, Math.max(0, (total / TOTAL_MAX) * 100));
 
   const handleSelectCustom = () => {
     setDistribution('custom');
@@ -106,8 +107,10 @@ export default function BudgetSetting() {
     );
   }
 
+  const totalDigits = String(Math.round(total)).length;
+
   return (
-    <form onSubmit={handleSubmit}>
+    <Form onSubmit={handleSubmit}>
       <FormColumn>
         <div>
           <BackButton to={backTo} />
@@ -116,9 +119,12 @@ export default function BudgetSetting() {
 
           <Field>
             <Label>나의 이번 달 총 예산</Label>
-            <TotalDisplay>{total.toLocaleString()} 원</TotalDisplay>
+            <TotalDisplay $digits={totalDigits}>
+              <TotalAmount>{formatWon(total)}</TotalAmount>
+              <TotalUnit>원</TotalUnit>
+            </TotalDisplay>
             <SliderWrap>
-              <SliderValue style={{ left: `calc(${totalPercent}%)` }}>{total.toLocaleString()}원</SliderValue>
+              <SliderValue $percent={totalPercent}>{formatWon(total)}원</SliderValue>
               <Slider
                 type="range"
                 min={0}
@@ -131,7 +137,7 @@ export default function BudgetSetting() {
                 }}
               />
             </SliderWrap>
-            <PeerText>나의 또래 친구들은 평균 {PEER_AVERAGE.toLocaleString()}원으로 설정했어요</PeerText>
+            <PeerText>나의 또래 친구들은 평균 {formatWon(PEER_AVERAGE)}원으로 설정했어요</PeerText>
           </Field>
 
           <Field>
@@ -140,7 +146,7 @@ export default function BudgetSetting() {
               <Radio $active={distribution === 'equal'} />
               <OptionText>
                 <OptionTitle>4주 균등 배분</OptionTitle>
-                <OptionSub>{equalWeekAmount.toLocaleString()}원씩 자동으로 설정돼요</OptionSub>
+                <OptionSub>{formatWon(equalWeekAmount)}원씩 자동으로 설정돼요</OptionSub>
               </OptionText>
             </OptionCard>
             <OptionCard type="button" $active={distribution === 'custom'} onClick={handleSelectCustom}>
@@ -168,9 +174,21 @@ export default function BudgetSetting() {
           )}
         </ButtonPrimary>
       </FormColumn>
-    </form>
+    </Form>
   );
 }
+
+const Form = styled.form`
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+`;
 
 const TitleDivider = styled.div`
   border-bottom: 1px solid #edeafb;
@@ -185,24 +203,42 @@ const ErrorText = styled.p`
   margin: 8px 0 0;
 `;
 
-const TotalDisplay = styled.div`
-  font-size: 26px;
+const TotalDisplay = styled.div<{ $digits: number }>`
+  display: flex;
+  align-items: baseline;
+  justify-content: flex-end;
+  gap: 8px;
+  max-width: 100%;
   font-weight: 800;
-  text-align: right;
+  /* 자릿수가 늘어나면 잘리는 대신 한 단계씩 작아진다 */
+  font-size: ${({ $digits }) => ($digits >= 11 ? 18 : $digits >= 9 ? 22 : 26)}px;
   background: #fff;
   border: 2px solid #6a5ce6;
   border-radius: 10px;
-  padding: 22px 20px;
+  padding: 16px 20px;
+  word-break: keep-all;
+`;
+
+const TotalAmount = styled.span`
+  overflow-wrap: anywhere;
+`;
+
+const TotalUnit = styled.span`
+  flex-shrink: 0;
+  font-size: 0.7em;
 `;
 
 const SliderWrap = styled.div`
   position: relative;
-  margin-top: 24px;
+  /* 입력창 하단 → 값 라벨(16px) → 라벨 높이(14px) → 슬라이더(10px) = 40px */
+  margin-top: 40px;
 `;
 
 const Slider = styled.input`
+  display: block;
   width: 100%;
   height: 12px;
+  margin: 0;
   border-radius: 999px;
   border: none;
   outline: none;
@@ -245,22 +281,28 @@ const Slider = styled.input`
   }
 `;
 
-const SliderValue = styled.div`
+const SliderValue = styled.div<{ $percent: number }>`
   position: absolute;
-  top: -22px;
-  transform: translateX(-50%);
+  /* 라벨 하단이 슬라이더 상단에서 10px 위 (라벨 높이 14px 포함) */
+  top: -24px;
+  /* 라벨의 왼쪽 끝(0%)~오른쪽 끝(100%)이 항상 슬라이더 폭 안에 머물게 한다 */
+  left: ${({ $percent }) => $percent}%;
+  transform: translateX(-${({ $percent }) => $percent}%);
+  max-width: 100%;
   font-size: 14px;
+  line-height: 1;
   font-weight: 800;
   color: #222;
-  margin-bottom: 6px;
   white-space: nowrap;
 `;
 
 const PeerText = styled.p`
+  max-width: 100%;
   font-size: 13px;
   color: #888;
-  margin: 12px 0 0;
+  margin: 10px 0 0;
   text-align: right;
+  word-break: keep-all;
 `;
 
 const OptionCard = styled.button<{ $active: boolean }>`
