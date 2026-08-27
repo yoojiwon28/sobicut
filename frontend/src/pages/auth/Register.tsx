@@ -49,7 +49,6 @@ export default function Register() {
   const [nickname, setNickname] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [agreeRequired, setAgreeRequired] = useState(false);
-  const [agreeMarketing, setAgreeMarketing] = useState(false);
 
   const [emailAvailable, setEmailAvailable] = useState(false);
   const [emailChecking, setEmailChecking] = useState(false);
@@ -177,10 +176,6 @@ export default function Register() {
       <CheckboxRow>
         <input type="checkbox" checked={agreeRequired} onChange={(e) => setAgreeRequired(e.target.checked)} />
         (필수) 이용 약관 및 개인 정보 수집 동의
-      </CheckboxRow>
-      <CheckboxRow>
-        <input type="checkbox" checked={agreeMarketing} onChange={(e) => setAgreeMarketing(e.target.checked)} />
-        (선택) 마케팅 정보 수신 동의
       </CheckboxRow>
 
       <ButtonPrimary type="submit" disabled={!canSubmit}>
