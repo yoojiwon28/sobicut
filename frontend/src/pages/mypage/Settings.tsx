@@ -13,6 +13,7 @@ export default function Settings() {
   const [cuttyAlert, setCuttyAlert] = useState(true);
   const [ledgerHelperAlert, setLedgerHelperAlert] = useState(true);
   const [surveyAlert, setSurveyAlert] = useState(true);
+  const [budgetImpulseAlert, setBudgetImpulseAlert] = useState(true); 
   const navigate = useNavigate();
   const { logout } = useAuth();
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
@@ -56,6 +57,10 @@ export default function Settings() {
         <ToggleRow>
             <span>만족도 조사 알림</span>
             <ToggleSwitch checked={surveyAlert} onChange={setSurveyAlert} />
+        </ToggleRow>
+        <ToggleRow>
+            <span>예산 초과 · 충동 소비 알림</span>
+            <ToggleSwitch checked={budgetImpulseAlert} onChange={setBudgetImpulseAlert} />
         </ToggleRow>
 
         <ArrowRow to="/mypage/settings/reset" label="데이터 초기화" />
