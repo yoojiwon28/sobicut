@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import BackButton from '../../components/BackButton';
 import Logo from '../../components/Logo';
+import Modal from '../../components/Modal';
 import { AuthTitle, Field, Label, Select, Input, ButtonPrimary, CheckboxRow, LoadingOverlay, Spinner } from '../../styles/auth.styles';
 import { signup } from '../../api/auth';
 import { ApiError } from '../../api/client';
@@ -63,6 +64,42 @@ const ErrorText = styled.p`
   margin: 8px 0 0;
 `;
 
+const ConsentCheckboxRow = styled(CheckboxRow)`
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+`;
+
+const ConsentLabel = styled.span`
+  flex: 1;
+`;
+
+const DetailLink = styled.button`
+  background: none;
+  border: none;
+  text-decoration: underline;
+  color: #6a5ce6;
+  font-size: 12px;
+  cursor: pointer;
+  padding: 0;
+  flex-shrink: 0;
+  white-space: nowrap;
+`;
+
+const TermsTitle = styled.h2`
+  font-size: 16px;
+  font-weight: 700;
+  margin: 0 0 12px;
+`;
+
+const TermsBody = styled.div`
+  font-size: 13px;
+  line-height: 1.6;
+  color: #444;
+  max-height: 300px;
+  overflow-y: auto;
+`;
+
 type RegisterState = { email: string; password: string; nickname: string };
 
 export default function RegisterProfile() {
@@ -80,14 +117,16 @@ export default function RegisterProfile() {
   const [livingType, setLivingType] = useState('');
   const [income, setIncome] = useState(70);
   const [manualIncome, setManualIncome] = useState(false);
-  const [agreeDetail, setAgreeDetail] = useState(false);
-  const [agreePersonalized, setAgreePersonalized] = useState(false);
+  const [agreeDataUse, setAgreeDataUse] = useState(false);
+  const [showTermsModal, setShowTermsModal] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
+  const canSubmit = Boolean(livingType) && agreeDataUse;
+
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    if (!state?.email || !livingType || submitting) return;
+    if (!state?.email || !canSubmit || submitting) return;
 
     setSubmitting(true);
     setError('');
@@ -156,22 +195,24 @@ export default function RegisterProfile() {
         </IncomeRow>
       </Field>
 
-      <CheckboxRow>
-        <input type="checkbox" checked={agreeDetail} onChange={(e) => setAgreeDetail(e.target.checked)} />
-        (선택) 상세 정보 제공 동의
-      </CheckboxRow>
-      <CheckboxRow>
-        <input
-          type="checkbox"
-          checked={agreePersonalized}
-          onChange={(e) => setAgreePersonalized(e.target.checked)}
-        />
-        (선택) 맞춤형 서비스 제공 이용
-      </CheckboxRow>
+
+      <ConsentCheckboxRow>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <input
+            type="checkbox"
+            checked={agreeDataUse}
+            onChange={(e) => setAgreeDataUse(e.target.checked)}
+          />
+          <ConsentLabel>(필수) 맞춤형 서비스 제공 및 상세 정보 이용 동의</ConsentLabel>
+        </div>
+        <DetailLink type="button" onClick={() => setShowTermsModal(true)}>
+          전문보기
+        </DetailLink>
+      </ConsentCheckboxRow>
 
       {error && <ErrorText>{error}</ErrorText>}
 
-      <ButtonPrimary type="submit" disabled={!livingType || submitting}>
+      <ButtonPrimary type="submit" disabled={!canSubmit || submitting}>
         시작하기
       </ButtonPrimary>
 
@@ -179,6 +220,19 @@ export default function RegisterProfile() {
         <LoadingOverlay>
           <Spinner />
         </LoadingOverlay>
+      )}
+
+      {showTermsModal && (
+        <Modal onClose={() => setShowTermsModal(false)}>
+          <TermsTitle>맞춤형 서비스 제공 및 상세 정보 이용 동의</TermsTitle>
+          <TermsBody>
+            <p>1. 수집 항목: 거주형태, 소득구간, 지출·수입 내역, 소비 태그</p>
+            <p>2. 이용 목적: 또래 사용자와의 소비 패턴 비교 분석, AI 기반 지출 내역 분석을 통한
+              맞춤형 소비 리포트·알림 제공</p>
+            <p>3. 보유·이용 기간: 회원 탈퇴 시까지 (탈퇴 시 즉시 파기)</p>
+            <p>4. 동의를 거부할 권리가 있으며, 동의 거부 시 서비스 이용이 제한될 수 있어요.</p>
+          </TermsBody>
+        </Modal>
       )}
     </form>
   );
