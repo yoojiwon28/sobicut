@@ -64,9 +64,3 @@ const Divider = styled.hr`
   margin: 4px 0;
 `;
 
-const LoadingText = styled.p`
-  text-align: center;
-  color: #999;
-  font-size: 13px;
-  padding: 60px 0;
-`;
