@@ -1,38 +1,110 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import styled from 'styled-components';
 import BackButton from '../../components/BackButton';
-import { AuthTitle, FormColumn, ButtonPrimary, Field, Label } from '../../styles/auth.styles';
-import { DUMMY_BUDGET } from '../../mocks/budget';
+import {
+  AuthTitle,
+  FormColumn,
+  ButtonPrimary,
+  Field,
+  Label,
+  Spinner,
+  PageSpinnerWrap,
+} from '../../styles/auth.styles';
+import {
+  BUDGET_QUERY_KEY,
+  getBudget,
+  updateBudget,
+  calcEvenWeekly,
+  toWeeklyArray,
+  toWeeklyBudgets,
+  isCustomWeekly,
+  type Budget,
+} from '../../api/budget';
+import { ApiError } from '../../api/client';
 import type { BudgetDistribution } from '../../types/budget';
 
 const TOTAL_STEP = 10000;
 const TOTAL_MAX = 2000000;
-const WEEK_ROUND = 1000;
+// 또래 평균 예산: 예산 API에 포함되지 않는 값이라 표시용 상수로 유지
+const PEER_AVERAGE = 700000;
 
 export default function BudgetSetting() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const queryClient = useQueryClient();
   const fromParam = searchParams.get('from');
   const backTo = fromParam ? decodeURIComponent(fromParam) : '/mypage';
-  const [total, setTotal] = useState(DUMMY_BUDGET.total);
-  const [distribution, setDistribution] = useState<BudgetDistribution>(DUMMY_BUDGET.distribution);
 
-  const equalWeekAmount = Math.floor(total / 4 / WEEK_ROUND) * WEEK_ROUND;
+  const { data: budget, isLoading, isError, error } = useQuery({
+    queryKey: BUDGET_QUERY_KEY,
+    queryFn: getBudget,
+  });
+
+  const [total, setTotal] = useState(0);
+  const [distribution, setDistribution] = useState<BudgetDistribution>('equal');
+
+  // 조회 데이터 도착 시 1회만 초기화 (사용자가 직접 바꾼 선택은 덮어쓰지 않는다)
+  const seededRef = useRef(false);
+  useEffect(() => {
+    if (!budget || seededRef.current) return;
+    seededRef.current = true;
+    setTotal(budget.monthly_budget);
+    setDistribution(isCustomWeekly(budget.weekly_budgets) ? 'custom' : 'equal');
+  }, [budget]);
+
+  const mutation = useMutation({
+    mutationFn: (payload: Budget) => updateBudget(payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: BUDGET_QUERY_KEY });
+      queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      navigate(backTo);
+    },
+  });
+
+  const equalWeekAmount = calcEvenWeekly(total);
   const totalPercent = (total / TOTAL_MAX) * 100;
 
   const handleSelectCustom = () => {
     setDistribution('custom');
-    navigate('/budget/weekly', { state: { total, backTo } });
+    navigate('/budget/weekly', { state: { backTo } });
   };
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
-    if (distribution === 'custom') return;
-    // TODO: PATCH /budget { total, distribution: 'equal' }
-    console.log('PATCH /budget', { total, distribution: 'equal' });
-    navigate(backTo);
+    if (distribution === 'custom' || !budget) return;
+    mutation.mutate({
+      ...budget,
+      monthly_budget: total,
+      weekly_budget: calcEvenWeekly(total),
+      weekly_budgets: toWeeklyBudgets(toWeeklyArray(budget.weekly_budgets).map(() => 0)),
+    });
   };
+
+  if (isLoading) {
+    return (
+      <FormColumn>
+        <PageSpinnerWrap>
+          <Spinner />
+        </PageSpinnerWrap>
+      </FormColumn>
+    );
+  }
+
+  if (isError || !budget) {
+    return (
+      <FormColumn>
+        <div>
+          <BackButton to={backTo} />
+          <AuthTitle $size={20}>예산 설정</AuthTitle>
+          <ErrorText>
+            {error instanceof ApiError ? error.message : '예산 정보를 불러오지 못했어요. 다시 시도해주세요.'}
+          </ErrorText>
+        </div>
+      </FormColumn>
+    );
+  }
 
   return (
     <form onSubmit={handleSubmit}>
@@ -59,7 +131,7 @@ export default function BudgetSetting() {
                 }}
               />
             </SliderWrap>
-            <PeerText>나의 또래 친구들은 평균 {DUMMY_BUDGET.peerAverage.toLocaleString()}원으로 설정했어요</PeerText>
+            <PeerText>나의 또래 친구들은 평균 {PEER_AVERAGE.toLocaleString()}원으로 설정했어요</PeerText>
           </Field>
 
           <Field>
@@ -78,10 +150,22 @@ export default function BudgetSetting() {
               </OptionText>
             </OptionCard>
           </Field>
+
+          {mutation.isError && (
+            <ErrorText>
+              {mutation.error instanceof ApiError
+                ? mutation.error.message
+                : '변경에 실패했어요. 다시 시도해주세요.'}
+            </ErrorText>
+          )}
         </div>
 
-        <ButtonPrimary type="submit" disabled={distribution === 'custom'}>
-          변경하기
+        <ButtonPrimary type="submit" disabled={distribution === 'custom' || mutation.isPending}>
+          {mutation.isPending ? (
+            <Spinner $size={18} $color="#fff" $trackColor="rgba(255,255,255,0.4)" />
+          ) : (
+            '변경하기'
+          )}
         </ButtonPrimary>
       </FormColumn>
     </form>
@@ -92,6 +176,13 @@ const TitleDivider = styled.div`
   border-bottom: 1px solid #edeafb;
   margin: 0 0 24px;
   padding-bottom: 14px;
+`;
+
+const ErrorText = styled.p`
+  color: #e74c3c;
+  font-size: 13px;
+  text-align: center;
+  margin: 8px 0 0;
 `;
 
 const TotalDisplay = styled.div`
