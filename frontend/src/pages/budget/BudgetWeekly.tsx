@@ -1,4 +1,11 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import {
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type ChangeEvent,
+  type FormEvent,
+} from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import styled from 'styled-components';
@@ -19,6 +26,7 @@ import {
   type Budget,
 } from '../../api/budget';
 import { ApiError } from '../../api/client';
+import { caretPosAfterFormat, formatWon, parseWon } from '../../utils/currency';
 
 const WEEK_STEP = 5000;
 
@@ -40,6 +48,20 @@ export default function BudgetWeekly() {
     if (budget) setWeeks(resolveWeekly(budget.weekly_budgets, budget.weekly_budget));
   }, [budget]);
 
+  // 콤마를 다시 채워 넣은 뒤 커서가 끝으로 튀지 않도록 위치를 복원한다.
+  const inputsRef = useRef<Array<HTMLInputElement | null>>([]);
+  const caretRef = useRef<{ idx: number; digits: number } | null>(null);
+
+  useLayoutEffect(() => {
+    const pending = caretRef.current;
+    if (!pending) return;
+    caretRef.current = null;
+    const el = inputsRef.current[pending.idx];
+    if (!el) return;
+    const pos = caretPosAfterFormat(el.value, pending.digits);
+    el.setSelectionRange(pos, pos);
+  });
+
   const mutation = useMutation({
     mutationFn: (payload: Budget) => updateBudget(payload),
     onSuccess: () => {
@@ -56,6 +78,14 @@ export default function BudgetWeekly() {
 
   const updateWeek = (idx: number, value: number) => {
     setWeeks((prev) => prev.map((w, i) => (i === idx ? Math.max(0, value) : w)));
+  };
+
+  const handleWeekInput = (idx: number, e: ChangeEvent<HTMLInputElement>) => {
+    const el = e.target;
+    const caret = el.selectionStart ?? el.value.length;
+    const digits = el.value.slice(0, caret).replace(/[^0-9]/g, '').length;
+    caretRef.current = { idx, digits };
+    updateWeek(idx, parseWon(el.value));
   };
 
   const handleSubmit = (e: FormEvent) => {
@@ -94,7 +124,7 @@ export default function BudgetWeekly() {
   }
 
   return (
-    <form onSubmit={handleSubmit}>
+    <Form onSubmit={handleSubmit}>
       <FormColumn>
         <div>
           <BackButton to={backTo} />
@@ -104,7 +134,7 @@ export default function BudgetWeekly() {
           <RemainingBox>
             <RemainingLabel>남은 예산</RemainingLabel>
             <RemainingValue>
-              {remaining.toLocaleString()}/ 총 {total.toLocaleString()} 원
+              {formatWon(remaining)} / 총 {formatWon(total)} 원
             </RemainingValue>
             <RemainingHint>남은 금액을 모두 배분해야 저장이 가능해요</RemainingHint>
           </RemainingBox>
@@ -113,17 +143,19 @@ export default function BudgetWeekly() {
             <WeekField key={idx}>
               <WeekLabel>{idx + 1}주차</WeekLabel>
               <WeekRow>
-                <WeekValueRow>
-                  <WeekBracket>[</WeekBracket>
+                <WeekAmountField>
                   <WeekInput
-                    type="number"
-                    step={WEEK_STEP}
-                    value={amount}
-                    onChange={(e) => updateWeek(idx, Number(e.target.value))}
+                    ref={(el) => {
+                      inputsRef.current[idx] = el;
+                    }}
+                    type="text"
+                    inputMode="numeric"
+                    value={amount === 0 ? '' : formatWon(amount)}
+                    placeholder="0"
+                    onChange={(e) => handleWeekInput(idx, e)}
                   />
-                  <WeekBracket>]</WeekBracket>
                   <WeekUnit>원</WeekUnit>
-                </WeekValueRow>
+                </WeekAmountField>
                 <WeekSlider
                   type="range"
                   min={0}
@@ -156,9 +188,21 @@ export default function BudgetWeekly() {
           )}
         </ButtonPrimary>
       </FormColumn>
-    </form>
+    </Form>
   );
 }
+
+const Form = styled.form`
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+`;
 
 const TitleDivider = styled.div`
   border-bottom: 1px solid #edeafb;
@@ -185,10 +229,13 @@ const RemainingLabel = styled.div`
 `;
 
 const RemainingValue = styled.div`
-  font-size: 22px;
+  max-width: 100%;
+  /* 자리수가 길어져도 끝의 '원'까지 잘리지 않도록 폭에 맞춰 축소 */
+  font-size: clamp(16px, 5.4vw, 22px);
   font-weight: 800;
   text-align: right;
   margin-top: 8px;
+  word-break: keep-all;
 `;
 
 const RemainingHint = styled.div`
@@ -211,45 +258,30 @@ const WeekLabel = styled.div`
 const WeekRow = styled.div`
   display: flex;
   align-items: center;
-  gap: 14px;
+  /* 금액 텍스트 ~ 슬라이더 가로 간격 */
+  gap: 12px;
 `;
 
-const WeekValueRow = styled.div`
+const WeekAmountField = styled.div`
   display: flex;
   align-items: baseline;
-  gap: 2px;
+  gap: 8px;
   flex-shrink: 0;
 `;
 
-const WeekBracket = styled.span`
-  font-size: 20px;
-  font-weight: 800;
-  color: #222;
-`;
-
 const WeekInput = styled.input`
-  width: 110px;
+  width: 96px;
   border: none;
   background: none;
-  font-size: 20px;
+  font-size: 18px;
   font-weight: 800;
-  text-align: center;
-  padding: 4px 0;
+  text-align: right;
+  padding: 0;
   outline: none;
-
-  &::-webkit-outer-spin-button,
-  &::-webkit-inner-spin-button {
-    -webkit-appearance: none;
-    margin: 0;
-  }
-
-  &[type='number'] {
-    -moz-appearance: textfield;
-  }
 `;
 
 const WeekUnit = styled.span`
-  font-size: 20px;
+  font-size: 18px;
   font-weight: 800;
   color: #222;
   flex-shrink: 0;
@@ -258,6 +290,8 @@ const WeekUnit = styled.span`
 const WeekSlider = styled.input`
   flex: 1;
   height: 14px;
+  /* UA 기본 margin(2px) 제거해 금액 텍스트와의 간격을 정확히 12px로 */
+  margin: 0;
   border-radius: 999px;
   border: none;
   outline: none;
