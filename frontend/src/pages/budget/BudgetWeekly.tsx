@@ -1,32 +1,58 @@
-// TODO: 주차별 설정 결과가 BudgetSetting/Analysis에 반영되지 않음
-//       전역 예산 상태 또는 API 연동 후 해결 필요
-
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import styled from 'styled-components';
 import BackButton from '../../components/BackButton';
-import { AuthTitle, FormColumn, ButtonPrimary } from '../../styles/auth.styles';
-import { DUMMY_BUDGET } from '../../mocks/budget';
+import {
+  AuthTitle,
+  FormColumn,
+  ButtonPrimary,
+  Spinner,
+  PageSpinnerWrap,
+} from '../../styles/auth.styles';
+import {
+  BUDGET_QUERY_KEY,
+  getBudget,
+  updateBudget,
+  resolveWeekly,
+  toWeeklyBudgets,
+  type Budget,
+} from '../../api/budget';
+import { ApiError } from '../../api/client';
 
 const WEEK_STEP = 5000;
 
 export default function BudgetWeekly() {
   const navigate = useNavigate();
   const location = useLocation();
-  const state = location.state as { total?: number; backTo?: string } | null;
-  const total = state?.total ?? DUMMY_BUDGET.total;
+  const state = location.state as { backTo?: string } | null;
   const backTo = state?.backTo ?? '/budget';
+  const queryClient = useQueryClient();
 
-  const [weeks, setWeeks] = useState<number[]>(() => {
-    const base = Math.floor(total / 4 / WEEK_STEP) * WEEK_STEP;
-    const amounts = [base, base, base, base];
-    amounts[3] += total - base * 4;
-    return amounts;
+  const { data: budget, isLoading, isError, error } = useQuery({
+    queryKey: BUDGET_QUERY_KEY,
+    queryFn: getBudget,
   });
 
+  const [weeks, setWeeks] = useState<number[]>([]);
+
+  useEffect(() => {
+    if (budget) setWeeks(resolveWeekly(budget.weekly_budgets, budget.weekly_budget));
+  }, [budget]);
+
+  const mutation = useMutation({
+    mutationFn: (payload: Budget) => updateBudget(payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: BUDGET_QUERY_KEY });
+      queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      navigate('/budget');
+    },
+  });
+
+  const total = budget?.monthly_budget ?? 0;
   const allocated = weeks.reduce((sum, w) => sum + w, 0);
   const remaining = total - allocated;
-  const canSave = remaining === 0;
+  const canSave = weeks.length > 0 && remaining === 0;
 
   const updateWeek = (idx: number, value: number) => {
     setWeeks((prev) => prev.map((w, i) => (i === idx ? Math.max(0, value) : w)));
@@ -34,11 +60,38 @@ export default function BudgetWeekly() {
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
-    if (!canSave) return;
-    // TODO: PATCH /budget/weeks { total, weeks }
-    console.log('PATCH /budget/weeks', { total, weeks });
-    navigate('/budget');
+    if (!canSave || !budget) return;
+    mutation.mutate({
+      ...budget,
+      monthly_budget: budget.monthly_budget,
+      weekly_budget: budget.weekly_budget,
+      weekly_budgets: toWeeklyBudgets(weeks),
+    });
   };
+
+  if (isLoading) {
+    return (
+      <FormColumn>
+        <PageSpinnerWrap>
+          <Spinner />
+        </PageSpinnerWrap>
+      </FormColumn>
+    );
+  }
+
+  if (isError || !budget) {
+    return (
+      <FormColumn>
+        <div>
+          <BackButton to={backTo} />
+          <AuthTitle $size={20}>주차별 예산 직접 설정</AuthTitle>
+          <ErrorText>
+            {error instanceof ApiError ? error.message : '예산 정보를 불러오지 못했어요. 다시 시도해주세요.'}
+          </ErrorText>
+        </div>
+      </FormColumn>
+    );
+  }
 
   return (
     <form onSubmit={handleSubmit}>
@@ -85,10 +138,22 @@ export default function BudgetWeekly() {
               </WeekRow>
             </WeekField>
           ))}
+
+          {mutation.isError && (
+            <ErrorText>
+              {mutation.error instanceof ApiError
+                ? mutation.error.message
+                : '저장에 실패했어요. 다시 시도해주세요.'}
+            </ErrorText>
+          )}
         </div>
 
-        <ButtonPrimary type="submit" disabled={!canSave}>
-          저장하기
+        <ButtonPrimary type="submit" disabled={!canSave || mutation.isPending}>
+          {mutation.isPending ? (
+            <Spinner $size={18} $color="#fff" $trackColor="rgba(255,255,255,0.4)" />
+          ) : (
+            '저장하기'
+          )}
         </ButtonPrimary>
       </FormColumn>
     </form>
@@ -99,6 +164,13 @@ const TitleDivider = styled.div`
   border-bottom: 1px solid #edeafb;
   margin: 0 0 24px;
   padding-bottom: 14px;
+`;
+
+const ErrorText = styled.p`
+  color: #e74c3c;
+  font-size: 13px;
+  text-align: center;
+  margin: 8px 0 0;
 `;
 
 const RemainingBox = styled.div`
