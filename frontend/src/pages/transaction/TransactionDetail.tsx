@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import styled from 'styled-components';
 import BackButton from '../../components/BackButton';
 import DateTimePickerField from '../../components/DateTimePickerField';
@@ -7,7 +8,10 @@ import BottomSheet from '../../components/BottomSheet';
 import TagQuestions, { TAG_LABEL, CONTEXT_TAG_NAMES } from '../../components/TagQuestions';
 import { AuthTitle } from '../../styles/auth.styles';
 import { FieldGroup, FieldLabel, OutlinedInput, OutlinedSelect, OutlinedTextarea } from '../../styles/field.styles';
-import { DUMMY_ALL_TRANSACTIONS, DUMMY_TODAY_EXPENSES } from '../../mocks/transactions';
+import { useTransaction } from '../../hooks/useTransactions';
+import { updateTransaction, type TransactionUpdateBody } from '../../api/transactions';
+import { ApiError } from '../../api/client';
+import { toDateKey } from '../../utils/date';
 import { CATEGORY_ICONS, CATEGORY_OPTIONS } from '../../utils/category';
 import incomeIcon from '../../assets/images/income_icon.svg';
 import expenseIcon from '../../assets/images/expense_icon.svg';
@@ -31,31 +35,65 @@ export default function TransactionDetail() {
   const { id } = useParams<{ id: string }>();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const tx = DUMMY_ALL_TRANSACTIONS.find((t) => String(t.id) === id);
+  const queryClient = useQueryClient();
+  const numericId = Number(id);
+  const fromParam = searchParams.get('from');
 
-  const [merchant, setMerchant] = useState(tx?.merchant ?? '');
-  const [category, setCategory] = useState(tx?.category ?? '');
-  const [memo, setMemo] = useState(tx?.description ?? '');
-  const [date, setDate] = useState(tx?.transaction_date ?? '');
-  const [time, setTime] = useState(tx?.transaction_time ?? '');
-  const [planTag, setPlanTag] = useState<string | null>(tx?.planTag ?? null);
-  const [contextTags, setContextTags] = useState<string[]>(tx?.contextTags ?? []);
+  const { data: tx, isPending, isError } = useTransaction(numericId);
+
+  const [merchant, setMerchant] = useState('');
+  const [category, setCategory] = useState('');
+  const [memo, setMemo] = useState('');
+  const [date, setDate] = useState('');
+  const [time, setTime] = useState('');
+  const [planTag, setPlanTag] = useState<string | null>(null);
+  const [contextTags, setContextTags] = useState<string[]>([]);
   const [tagSheetOpen, setTagSheetOpen] = useState(false);
 
-  if (!tx) {
+  // 조회 데이터 도착 시 1회만 폼 초기화 (사용자가 편집한 값은 덮어쓰지 않는다)
+  const seededRef = useRef(false);
+  useEffect(() => {
+    if (!tx || seededRef.current) return;
+    seededRef.current = true;
+    setMerchant(tx.merchant ?? '');
+    setCategory(tx.category ?? '');
+    setMemo(tx.description ?? '');
+    setDate(tx.transaction_date ?? '');
+    setTime(tx.transaction_time ?? '');
+    setPlanTag(tx.planTag ?? null);
+    setContextTags(tx.contextTags ?? []);
+  }, [tx]);
+
+  const mutation = useMutation({
+    mutationFn: (body: TransactionUpdateBody) => updateTransaction(numericId, body),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['transactions'] });
+    },
+  });
+
+  if (isPending) {
     return (
       <Page>
-        <BackButton to="/" />
-        <EmptyText>내역을 찾을 수 없어요.</EmptyText>
+        <BackButton to={fromParam ?? '/'} />
+        <AuthTitle $size={20}>상세 내역</AuthTitle>
+        <EmptyText>불러오는 중이에요.</EmptyText>
+      </Page>
+    );
+  }
+
+  if (isError || !tx) {
+    return (
+      <Page>
+        <BackButton to={fromParam ?? '/'} />
+        <EmptyText>거래를 찾을 수 없어요</EmptyText>
       </Page>
     );
   }
 
   const isExpense = tx.type === 'expense';
-  const fromParam = searchParams.get('from');
   const backTo = fromParam
     ? fromParam
-    : DUMMY_TODAY_EXPENSES.some((t) => t.id === tx.id)
+    : tx.transaction_date === toDateKey(new Date())
       ? '/expenses/today'
       : `/day/${tx.transaction_date}`;
 
@@ -69,15 +107,21 @@ export default function TransactionDetail() {
     !isSameTagSet(contextTags, tx.contextTags ?? []);
 
   const handleSubmit = () => {
-    // TODO: updateTransaction API 연동
-    console.log(`PATCH /transactions/${tx.id}`, {
-      merchant,
-      category,
-      description: memo,
-      transaction_date: date,
-      transaction_time: time,
-    });
-    navigate(backTo);
+    // DateTimePickerField 는 'HH:mm' 를 내보내지만 API 는 'HH:mm:ss' 를 요구한다
+    const transaction_time = /^\d{2}:\d{2}$/.test(time) ? `${time}:00` : time;
+    // 조회한 원본을 베이스로, 화면에서 수정한 필드만 덮어써 전체 교체(PUT)한다
+    mutation.mutate(
+      {
+        amount: tx.amount,
+        type: tx.type,
+        category,
+        merchant: merchant.length > 0 ? merchant : null,
+        description: memo.length > 0 ? memo : null,
+        transaction_date: date,
+        transaction_time,
+      },
+      { onSuccess: () => navigate(backTo) },
+    );
   };
 
   return (
@@ -165,9 +209,16 @@ export default function TransactionDetail() {
         />
       </StyledFieldGroup>
 
-      <SubmitButton type="button" disabled={!isDirty} onClick={handleSubmit}>
+      <SubmitButton type="button" disabled={!isDirty || mutation.isPending} onClick={handleSubmit}>
         수정 완료
       </SubmitButton>
+      {mutation.isError && (
+        <EmptyText>
+          {mutation.error instanceof ApiError
+            ? mutation.error.message
+            : '저장에 실패했어요. 다시 시도해주세요.'}
+        </EmptyText>
+      )}
 
       {tagSheetOpen && (
         <TagEditSheet
