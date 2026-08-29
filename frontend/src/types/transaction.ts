@@ -21,3 +21,13 @@ export type Transaction = {
   planTag?: string | null;
   contextTags?: string[];
 };
+
+// GET /transactions 쿼리 파라미터. 전부 optional이며, 값이 없는 필드는 쿼리스트링에서 제외한다.
+export type TransactionListParams = {
+  year?: number;
+  month?: number;
+  week?: number; // ISO 주차
+  date?: string; // 'YYYY-MM-DD'
+  type?: string;
+  category?: string;
+};
