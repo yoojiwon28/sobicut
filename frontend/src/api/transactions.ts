@@ -52,6 +52,24 @@ export function createTransaction(payload: TransactionCreatePayload) {
   });
 }
 
+export type TransactionUpdateBody = {
+  amount: number; // > 0, 화면에서 수정 불가지만 원본 값 그대로 포함
+  type: string;
+  category: string;
+  merchant: string | null;
+  description: string | null;
+  transaction_date: string; // 'YYYY-MM-DD'
+  transaction_time: string; // 'HH:mm:ss'
+};
+
+// PUT은 전체 교체 방식. emotion_tags는 body에 포함하지 않는다.
+export function updateTransaction(id: number, body: TransactionUpdateBody): Promise<void> {
+  return apiFetch<void>(`/transactions/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(body),
+  });
+}
+
 export function tagTransactionEmotions(transactionId: number, emotionTagIds: number[]) {
   return apiFetch<{ message: string }>(`/transactions/${transactionId}/emotions`, {
     method: 'POST',
