@@ -1,49 +1,76 @@
 import { useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import styled from 'styled-components';
 import BackButton from '../../components/BackButton';
 import { ButtonPrimary, PageWrap } from '../../styles/auth.styles';
 import { FieldLabel } from '../../styles/field.styles';
-import { DUMMY_ALL_TRANSACTIONS } from '../../mocks/transactions';
-import { CATEGORY_ICONS } from '../../utils/category';
+import { ApiError } from '../../api/client';
+import { createSatisfaction } from '../../api/satisfactions';
+import { usePendingSatisfactions } from '../../hooks/useSatisfactions';
 
 const SCORE_CAPTIONS: Record<number, string> = {
   1: '매우 불만족',
   5: '매우 만족',
 };
 
-function getDaysAfter(dateStr: string) {
-  const target = new Date(dateStr);
-  const today = new Date();
-  const targetMidnight = new Date(target.getFullYear(), target.getMonth(), target.getDate());
-  const todayMidnight = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-  return Math.round((todayMidnight.getTime() - targetMidnight.getTime()) / 86400000);
-}
-
 export default function SatisfactionSurvey() {
   const { transactionId } = useParams<{ transactionId: string }>();
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [score, setScore] = useState<number | null>(null);
 
-  const tx = DUMMY_ALL_TRANSACTIONS.find((t) => String(t.id) === transactionId);
+  const txId = Number(transactionId);
+  const dayTypeParam = searchParams.get('day_type');
 
-  if (!tx) {
+  const { data: pending, isLoading, isError } = usePendingSatisfactions();
+
+  // transaction_id 가 일치하는 pending 항목들 중에서
+  // day_type 쿼리가 있으면 그 회차를, 없으면 첫 번째 회차를 사용한다.
+  // useParams 의 transactionId 는 문자열이고, API 응답의 transaction_id 가
+  // 런타임에서 문자열로 올 수도 있으므로 양쪽 모두 문자열로 비교한다.
+  const candidates = (pending ?? []).filter(
+    (p) => String(p.transaction_id) === transactionId,
+  );
+  const item = dayTypeParam
+    ? candidates.find((p) => p.day_type === dayTypeParam)
+    : candidates[0];
+
+  const mutation = useMutation({
+    mutationFn: () =>
+      createSatisfaction({ transaction_id: txId, day_type: item!.day_type, score: score! }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['satisfactions', 'pending'] });
+      navigate('/satisfaction/result');
+    },
+  });
+
+  if (isLoading) {
     return (
       <PageWrap>
         <BackButton to="/notification" />
-        <EmptyText>거래를 찾을 수 없어요</EmptyText>
+        <EmptyText>불러오는 중…</EmptyText>
       </PageWrap>
     );
   }
 
-  const daysAfter = getDaysAfter(tx.transaction_date);
-  const isExpense = tx.type === 'expense';
+  if (isError || !item) {
+    return (
+      <PageWrap>
+        <BackButton to="/notification" />
+        <EmptyText>
+          {isError ? '설문을 불러오지 못했어요' : '이미 응답했거나 만료된 설문이에요'}
+        </EmptyText>
+      </PageWrap>
+    );
+  }
+
+  const dayType = item.day_type;
 
   const handleSubmit = () => {
-    if (!score) return;
-    // TODO: PATCH /transactions/:id/satisfaction 로 교체
-    console.log(`PATCH /transactions/${tx.id}/satisfaction`, { score, days_after: daysAfter });
-    navigate('/satisfaction/result');
+    if (!score || mutation.isPending) return;
+    mutation.mutate();
   };
 
   return (
@@ -52,20 +79,19 @@ export default function SatisfactionSurvey() {
       <Title>만족도 입력</Title>
 
       <BadgeRow>
-        <DaysBadge>{daysAfter}일 전</DaysBadge>
+        <DaysBadge>{dayType} 후</DaysBadge>
       </BadgeRow>
       <AmountRow>
         <Amount>
-          {isExpense ? '-' : '+'}
-          {tx.amount.toLocaleString()} 원
+          -{item.amount.toLocaleString()} 원
         </Amount>
-        <img src={CATEGORY_ICONS[tx.category]} alt="" width={28} height={28} />
+        {/* pending 응답에 category가 없어 아이콘을 확정할 수 없다 → 아이콘 영역을 숨긴다 */}
       </AmountRow>
 
       <Divider />
 
       <FieldLabel>결제처</FieldLabel>
-      <MerchantBox>{tx.merchant}</MerchantBox>
+      <MerchantBox>{item.merchant}</MerchantBox>
 
       <Guide>현재 이 지출에 대한 만족도를 입력해주세요.</Guide>
 
@@ -88,10 +114,22 @@ export default function SatisfactionSurvey() {
       </ScoreRow>
 
       <SubmitWrap>
-        <SubmitButton type="button" disabled={!score} onClick={handleSubmit}>
-          제출하기
+        <SubmitButton
+          type="button"
+          disabled={!score || mutation.isPending}
+          onClick={handleSubmit}
+        >
+          {mutation.isPending ? '제출 중…' : '제출하기'}
         </SubmitButton>
       </SubmitWrap>
+
+      {mutation.isError && (
+        <ErrorText>
+          {mutation.error instanceof ApiError
+            ? mutation.error.message
+            : '제출에 실패했어요. 다시 시도해주세요.'}
+        </ErrorText>
+      )}
 
       <ResultLinkWrap>
         <ResultLink type="button" onClick={() => navigate('/satisfaction/result')}>
@@ -240,4 +278,11 @@ const EmptyText = styled.div`
   color: #999;
   font-size: 13px;
   padding: 60px 0;
+`;
+
+const ErrorText = styled.p`
+  color: #e74c3c;
+  font-size: 13px;
+  text-align: center;
+  margin: 0 0 16px;
 `;
