@@ -1,21 +1,20 @@
 import { apiFetch } from './client';
-import type { Transaction } from '../types/transaction';
+import type { Transaction, TransactionListParams } from '../types/transaction';
 
-export function getTransactions(params: {
-  date?: string;
-  year?: number;
-  month?: number;
-  type?: 'expense' | 'income';
-  category?: string;
-} = {}) {
+export function getTransactions(params: TransactionListParams = {}) {
   const query = new URLSearchParams();
   if (params.date) query.set('date', params.date);
   if (params.year) query.set('year', String(params.year));
   if (params.month) query.set('month', String(params.month));
+  if (params.week) query.set('week', String(params.week));
   if (params.type) query.set('type', params.type);
   if (params.category) query.set('category', params.category);
   const qs = query.toString();
   return apiFetch<Transaction[]>(`/transactions${qs ? `?${qs}` : ''}`);
+}
+
+export function getTransaction(id: number) {
+  return apiFetch<Transaction>(`/transactions/${id}`);
 }
 
 export type ParsedCardMessage = {
