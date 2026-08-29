@@ -3,18 +3,26 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import styled from 'styled-components';
 import BackButton from '../../components/BackButton';
 import { PageWrap } from '../../styles/auth.styles';
-import { DUMMY_CALENDAR_TRANSACTIONS } from '../../mocks/transactions';
+import { useTransactions } from '../../hooks/useTransactions';
+import type { Transaction } from '../../types/transaction';
 import { CATEGORY_COLORS } from '../../utils/category';
 import { getMonthKey } from '../../utils/date';
 import angleRightIcon from '../../assets/images/angle_right.svg';
+
+const EMPTY_TRANSACTIONS: Transaction[] = [];
 
 export default function CategoryList() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const monthKey = searchParams.get('month') ?? getMonthKey(new Date());
 
+  // monthKey는 'YYYY-MM' → month는 이미 1~12 정수
+  const [year, month] = monthKey.split('-').map(Number);
+  const query = useTransactions({ year, month, type: 'expense' });
+  const transactions = query.data ?? EMPTY_TRANSACTIONS;
+
   const rows = useMemo(() => {
-    const monthExpenses = DUMMY_CALENDAR_TRANSACTIONS.filter(
+    const monthExpenses = transactions.filter(
       (tx) => tx.type === 'expense' && tx.transaction_date.startsWith(monthKey),
     );
     const total = monthExpenses.reduce((sum, tx) => sum + tx.amount, 0);
@@ -29,14 +37,18 @@ export default function CategoryList() {
         percent: total > 0 ? Math.round((amount / total) * 100) : 0,
       }))
       .sort((a, b) => b.amount - a.amount);
-  }, [monthKey]);
+  }, [monthKey, transactions]);
 
   return (
     <PageWrap>
       <BackButton to="/analysis" />
       <Title>카테고리 별 소비</Title>
 
-      {rows.length === 0 ? (
+      {query.isPending ? (
+        <EmptyText>—</EmptyText>
+      ) : query.isError ? (
+        <EmptyText>불러오지 못했어요</EmptyText>
+      ) : rows.length === 0 ? (
         <EmptyText>이번 달 소비 내역이 없어요.</EmptyText>
       ) : (
         <List>

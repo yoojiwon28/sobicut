@@ -4,7 +4,7 @@ import styled from 'styled-components';
 import BackButton from '../../components/BackButton';
 import ExpenseList from '../../components/ExpenseList';
 import { PageWrap } from '../../styles/auth.styles';
-import { DUMMY_CALENDAR_TRANSACTIONS } from '../../mocks/transactions';
+import { useTransactions } from '../../hooks/useTransactions';
 import { getMonthKey, formatMonthDay, formatMonthLabel } from '../../utils/date';
 import type { Transaction } from '../../types/transaction';
 
@@ -12,6 +12,8 @@ type DateGroup = {
   date: string;
   items: Transaction[];
 };
+
+const EMPTY_TRANSACTIONS: Transaction[] = [];
 
 export default function CategoryDetail() {
   const navigate = useNavigate();
@@ -25,8 +27,13 @@ export default function CategoryDetail() {
   const fromParam = searchParams.get('from');
   const backTo = fromParam ? decodeURIComponent(fromParam) : `/analysis/categories?month=${monthKey}`;
 
+  // monthKey는 'YYYY-MM' → month는 이미 1~12 정수. category는 서버 필터로 전달하고 아래 클라이언트 필터도 유지
+  const [year, month] = monthKey.split('-').map(Number);
+  const query = useTransactions({ year, month, type: 'expense', category: decoded });
+  const transactions = query.data ?? EMPTY_TRANSACTIONS;
+
   const groups = useMemo(() => {
-    const items = DUMMY_CALENDAR_TRANSACTIONS.filter(
+    const items = transactions.filter(
       (tx) => tx.type === 'expense' && tx.category === decoded && tx.transaction_date.startsWith(monthKey),
     ).sort(
       (a, b) =>
@@ -43,7 +50,7 @@ export default function CategoryDetail() {
       }
     }
     return result;
-  }, [decoded, monthKey]);
+  }, [decoded, monthKey, transactions]);
 
   const total = groups.reduce((sum, g) => sum + g.items.reduce((s, tx) => s + tx.amount, 0), 0);
 
@@ -58,7 +65,11 @@ export default function CategoryDetail() {
         <Total>{total.toLocaleString()}원</Total>
       </Header>
 
-      {groups.length === 0 ? (
+      {query.isPending ? (
+        <EmptyText>—</EmptyText>
+      ) : query.isError ? (
+        <EmptyText>불러오지 못했어요</EmptyText>
+      ) : groups.length === 0 ? (
         <EmptyText>{monthLabel} {decoded} 소비 내역이 없어요.</EmptyText>
       ) : (
         <ListCard>
