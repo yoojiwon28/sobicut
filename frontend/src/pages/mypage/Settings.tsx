@@ -8,16 +8,62 @@ import { useNavigate } from 'react-router-dom';
 import { logout as logoutApi } from '../../api/auth';
 import { useAuth } from '../../contexts/AuthContext';
 import WithdrawModal from '../../components/WithdrawModal';
+import { getVapidPublicKey, subscribePush, unsubscribePush } from '../../api/notifications';
+import { ensurePushSubscription } from '../../utils/push';
+import { ApiError } from '../../api/client';
+
+const NOTIFICATION_TYPES = {
+  cutty: '소비컷알림',
+  survey: '만족도조사알림',
+} as const;
 
 export default function Settings() {
   const [cuttyAlert, setCuttyAlert] = useState(true);
-  const [ledgerHelperAlert, setLedgerHelperAlert] = useState(true);
+  const [ledgerHelperAlert, setLedgerHelperAlert] = useState(true); 
   const [surveyAlert, setSurveyAlert] = useState(true);
   const [budgetImpulseAlert, setBudgetImpulseAlert] = useState(true); 
   const navigate = useNavigate();
   const { logout } = useAuth();
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
+
+  const [pushBusyType, setPushBusyType] = useState<string | null>(null);
+  const [pushError, setPushError] = useState('');
+
+  const handleToggleSubscription = async (
+    notificationType: string,
+    next: boolean,
+    setState: (v: boolean) => void,
+  ) => {
+    setPushBusyType(notificationType);
+    setPushError('');
+    try {
+      if (next) {
+        const { public_key } = await getVapidPublicKey();
+        const subscription = await ensurePushSubscription(public_key);
+        const json = subscription.toJSON();
+        if (!json.endpoint || !json.keys?.p256dh || !json.keys?.auth) {
+          throw new Error('구독 정보를 가져오지 못했어요.');
+        }
+        await subscribePush({
+          endpoint: json.endpoint,
+          keys: { p256dh: json.keys.p256dh, auth: json.keys.auth },
+          notification_type: notificationType,
+        });
+      } else {
+        const registration = await navigator.serviceWorker.ready;
+        const existing = await registration.pushManager.getSubscription();
+        if (existing) {
+          await unsubscribePush({ endpoint: existing.endpoint, notification_type: notificationType });
+        }
+      }
+      setState(next);
+    } catch (err) {
+      setPushError(err instanceof ApiError ? err.message : '알림 설정을 변경하지 못했어요.');
+    } finally {
+      setPushBusyType(null);
+    }
+  };
 
   const handleLogout = async () => {
     setLoggingOut(true);
@@ -48,7 +94,11 @@ export default function Settings() {
 
         <ToggleRow>
             <span>소비컷 알림</span>
-            <ToggleSwitch checked={cuttyAlert} onChange={setCuttyAlert} />
+            <ToggleSwitch
+              checked={cuttyAlert}
+              onChange={(v) => handleToggleSubscription(NOTIFICATION_TYPES.cutty, v, setCuttyAlert)}
+              disabled={pushBusyType === NOTIFICATION_TYPES.cutty}
+            />
         </ToggleRow>
         <ToggleRow>
             <span>가계부 입력 도우미 알림</span>
@@ -56,7 +106,11 @@ export default function Settings() {
         </ToggleRow>
         <ToggleRow>
             <span>만족도 조사 알림</span>
-            <ToggleSwitch checked={surveyAlert} onChange={setSurveyAlert} />
+            <ToggleSwitch
+              checked={surveyAlert}
+              onChange={(v) => handleToggleSubscription(NOTIFICATION_TYPES.survey, v, setSurveyAlert)}
+              disabled={pushBusyType === NOTIFICATION_TYPES.survey}
+            />
         </ToggleRow>
         <ToggleRow>
             <span>예산 초과 · 충동 소비 알림</span>
@@ -65,6 +119,8 @@ export default function Settings() {
 
         <ArrowRow to="/mypage/settings/reset" label="데이터 초기화" />
       </MenuList>
+
+      {pushError && <ErrorText>{pushError}</ErrorText>}
 
       <FooterLinks>
         <button type="button" onClick={handleLogout} disabled={loggingOut}>
@@ -108,6 +164,12 @@ const ToggleRow = styled.div`
   padding: 14px 0;
   font-size: 15px;
   font-weight: 600;
+`;
+
+const ErrorText = styled.p`
+  color: #e74c3c;
+  font-size: 12px;
+  margin: 0 0 8px;
 `;
 
 const FooterLinks = styled.div`
