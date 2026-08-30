@@ -1,15 +1,16 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import styled from 'styled-components';
 import BackButton from '../../components/BackButton';
 import DateTimePickerField from '../../components/DateTimePickerField';
 import BottomSheet from '../../components/BottomSheet';
-import TagQuestions, { TAG_LABEL, CONTEXT_TAG_NAMES } from '../../components/TagQuestions';
+import TagQuestions, { TAG_LABEL, CONTEXT_TAG_NAMES, PLAN_TAG_NAMES } from '../../components/TagQuestions';
 import { AuthTitle } from '../../styles/auth.styles';
 import { FieldGroup, FieldLabel, OutlinedInput, OutlinedSelect, OutlinedTextarea } from '../../styles/field.styles';
 import { useTransaction } from '../../hooks/useTransactions';
-import { updateTransaction, type TransactionUpdateBody } from '../../api/transactions';
+import { useEmotions } from '../../hooks/useEmotions';
+import { updateTransaction, tagTransactionEmotions, type TransactionUpdateBody } from '../../api/transactions';
 import { ApiError } from '../../api/client';
 import { toDateKey } from '../../utils/date';
 import { CATEGORY_ICONS, CATEGORY_OPTIONS } from '../../utils/category';
@@ -40,6 +41,7 @@ export default function TransactionDetail() {
   const fromParam = searchParams.get('from');
 
   const { data: tx, isPending, isError } = useTransaction(numericId);
+  const { data: emotions, isPending: emotionsPending } = useEmotions();
 
   const [merchant, setMerchant] = useState('');
   const [category, setCategory] = useState('');
@@ -49,6 +51,23 @@ export default function TransactionDetail() {
   const [planTag, setPlanTag] = useState<string | null>(null);
   const [contextTags, setContextTags] = useState<string[]>([]);
   const [tagSheetOpen, setTagSheetOpen] = useState(false);
+  const [tagError, setTagError] = useState(false);
+  const [tagSaving, setTagSaving] = useState(false);
+
+  // emotion_tags(백엔드 표준 필드)에서 계획성/소비특성 태그를 name 기준으로 분리한다.
+  const { initialPlanTag, initialContextTags } = useMemo(() => {
+    const names = (tx?.emotion_tags ?? []).map((t) => t.name);
+    return {
+      initialPlanTag: PLAN_TAG_NAMES.find((name) => names.includes(name)) ?? null,
+      initialContextTags: CONTEXT_TAG_NAMES.filter((name) => names.includes(name)),
+    };
+  }, [tx]);
+
+  // 태그 name -> id 변환용. id는 이력상 바뀔 수 있으므로 GET /emotions 응답으로만 매핑한다.
+  const emotionIdByName = useMemo(
+    () => new Map((emotions ?? []).map((tag) => [tag.name, tag.id] as const)),
+    [emotions],
+  );
 
   // 조회 데이터 도착 시 1회만 폼 초기화 (사용자가 편집한 값은 덮어쓰지 않는다)
   const seededRef = useRef(false);
@@ -60,9 +79,9 @@ export default function TransactionDetail() {
     setMemo(tx.description ?? '');
     setDate(tx.transaction_date ?? '');
     setTime(tx.transaction_time ?? '');
-    setPlanTag(tx.planTag ?? null);
-    setContextTags(tx.contextTags ?? []);
-  }, [tx]);
+    setPlanTag(initialPlanTag);
+    setContextTags(initialContextTags);
+  }, [tx, initialPlanTag, initialContextTags]);
 
   const mutation = useMutation({
     mutationFn: (body: TransactionUpdateBody) => updateTransaction(numericId, body),
@@ -97,18 +116,21 @@ export default function TransactionDetail() {
       ? '/expenses/today'
       : `/day/${tx.transaction_date}`;
 
+  const tagsChanged =
+    planTag !== initialPlanTag || !isSameTagSet(contextTags, initialContextTags);
+
   const isDirty =
     merchant !== (tx.merchant ?? '') ||
     category !== (tx.category ?? '') ||
     memo !== (tx.description ?? '') ||
     date !== (tx.transaction_date ?? '') ||
     time !== (tx.transaction_time ?? '') ||
-    planTag !== (tx.planTag ?? null) ||
-    !isSameTagSet(contextTags, tx.contextTags ?? []);
+    tagsChanged;
 
   const handleSubmit = () => {
     // DateTimePickerField 는 'HH:mm' 를 내보내지만 API 는 'HH:mm:ss' 를 요구한다
     const transaction_time = /^\d{2}:\d{2}$/.test(time) ? `${time}:00` : time;
+    setTagError(false);
     // 조회한 원본을 베이스로, 화면에서 수정한 필드만 덮어써 전체 교체(PUT)한다
     mutation.mutate(
       {
@@ -120,7 +142,28 @@ export default function TransactionDetail() {
         transaction_date: date,
         transaction_time,
       },
-      { onSuccess: () => navigate(backTo) },
+      {
+        onSuccess: async () => {
+          // 태그는 PUT body 밖. 변경됐을 때만 교체형 엔드포인트로 별도 저장한다.
+          if (tagsChanged) {
+            const ids = [planTag, ...contextTags]
+              .filter((name): name is string => name !== null)
+              .map((name) => emotionIdByName.get(name))
+              .filter((id): id is number => id !== undefined);
+            setTagSaving(true);
+            try {
+              await tagTransactionEmotions(tx.id, ids);
+              queryClient.invalidateQueries({ queryKey: ['transactions'] });
+            } catch {
+              setTagError(true);
+              return; // 태그 저장 실패 시 이동하지 않는다
+            } finally {
+              setTagSaving(false);
+            }
+          }
+          navigate(backTo);
+        },
+      },
     );
   };
 
@@ -209,20 +252,25 @@ export default function TransactionDetail() {
         />
       </StyledFieldGroup>
 
-      <SubmitButton type="button" disabled={!isDirty || mutation.isPending} onClick={handleSubmit}>
+      <SubmitButton
+        type="button"
+        disabled={!isDirty || mutation.isPending || tagSaving || emotionsPending}
+        onClick={handleSubmit}
+      >
         수정 완료
       </SubmitButton>
-      {mutation.isError && (
+      {(mutation.isError || tagError) && (
         <EmptyText>
-          {mutation.error instanceof ApiError
-            ? mutation.error.message
-            : '저장에 실패했어요. 다시 시도해주세요.'}
+          {tagError
+            ? '태그 저장에 실패했어요. 다시 시도해주세요.'
+            : mutation.error instanceof ApiError
+              ? mutation.error.message
+              : '저장에 실패했어요. 다시 시도해주세요.'}
         </EmptyText>
       )}
 
       {tagSheetOpen && (
         <TagEditSheet
-          transactionId={tx.id}
           initialPlanTag={planTag}
           initialContextTags={contextTags}
           onClose={() => setTagSheetOpen(false)}
@@ -238,14 +286,13 @@ export default function TransactionDetail() {
 }
 
 type TagEditSheetProps = {
-  transactionId: number;
   initialPlanTag: string | null;
   initialContextTags: string[];
   onClose: () => void;
   onSave: (planTag: string | null, contextTags: string[]) => void;
 };
 
-function TagEditSheet({ transactionId, initialPlanTag, initialContextTags, onClose, onSave }: TagEditSheetProps) {
+function TagEditSheet({ initialPlanTag, initialContextTags, onClose, onSave }: TagEditSheetProps) {
   const [planTag, setPlanTag] = useState(initialPlanTag);
   const [contextTags, setContextTags] = useState(initialContextTags);
 
@@ -253,9 +300,8 @@ function TagEditSheet({ transactionId, initialPlanTag, initialContextTags, onClo
     setContextTags((prev) => (prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]));
   };
 
+  // 시트 저장은 부모 state 반영만 한다. 서버 저장은 '수정 완료'에서 처리.
   const handleSave = () => {
-    // TODO: PATCH /transactions/:id 연동, emotion_tag_ids 매핑 필요
-    console.log(`PATCH /transactions/${transactionId} (tags)`, { planTag, contextTags });
     onSave(planTag, contextTags);
   };
 
