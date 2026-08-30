@@ -6,6 +6,8 @@ import {
   getMonthlyForecast,
   getScores,
   getBudgetStatus,
+  getCategoryReport,
+  getHeatmapReport,
 } from '../api/reports';
 
 const STALE_TIME = 60 * 1000; // 60초
@@ -54,6 +56,22 @@ export function useBudgetStatus(params?: { year?: number; month?: number }) {
   return useQuery({
     queryKey: ['reports', 'budget-status', params?.year ?? null, params?.month ?? null],
     queryFn: () => getBudgetStatus(params),
+    staleTime: STALE_TIME,
+  });
+}
+
+export function useCategoryReport(params?: { year?: number; month?: number }) {
+  return useQuery({
+    queryKey: ['reports', 'category', params?.year ?? null, params?.month ?? null],
+    queryFn: () => getCategoryReport(params),
+    staleTime: STALE_TIME,
+  });
+}
+
+export function useHeatmapReport(params?: { year?: number; month?: number }) {
+  return useQuery({
+    queryKey: ['reports', 'heatmap', params?.year ?? null, params?.month ?? null],
+    queryFn: () => getHeatmapReport(params),
     staleTime: STALE_TIME,
   });
 }

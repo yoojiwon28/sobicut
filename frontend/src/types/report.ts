@@ -86,6 +86,33 @@ export type Scores = {
   };
 };
 
+// GET /reports/category (소비 카테고리 집계 — year/month optional, 없으면 이번 달)
+// 주의: 금액 0인 카테고리도 8개 전부 내려온다.
+export type CategoryReport = {
+  total_spent: number;
+  categories: {
+    category: string;
+    amount: number;
+    ratio: number;
+  }[];
+};
+
+// GET /reports/heatmap (요일 × 시간대 소비 집계 — year/month optional, 없으면 이번 달)
+// 주의: 값이 있는 셀만 내려온다. day는 "월"~"일", time_slot은 "새벽"/"아침"/"점심"/"저녁"/"밤".
+export type HeatmapReport = {
+  heatmap: {
+    day: string;
+    time_slot: string;
+    amount: number;
+    count: number;
+  }[];
+  peak: {
+    day: string;
+    time_slot: string;
+    notification_label: string;
+  } | null;
+};
+
 // GET /reports/budget-status (year/month optional — 없으면 이번 달)
 export type BudgetStatus = {
   monthly: {

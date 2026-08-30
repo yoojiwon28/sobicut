@@ -2,9 +2,7 @@ import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import { PageWrap } from '../styles/auth.styles';
-import { useTransactions } from '../hooks/useTransactions';
-import { useScores, useBudgetStatus } from '../hooks/useReports';
-import type { Transaction } from '../types/transaction';
+import { useScores, useBudgetStatus, useCategoryReport, useHeatmapReport } from '../hooks/useReports';
 import { getMonthKey, formatMonthLabel, addMonths } from '../utils/date';
 import { CATEGORY_COLORS } from '../utils/category';
 import editIcon from '../assets/images/edit_icon.svg';
@@ -27,33 +25,13 @@ function WalletIcon({ color }: { color: string }) {
 
 const WEEKDAYS = ['월', '화', '수', '목', '금', '토', '일'];
 
-const TIME_SLOTS: { label: string; test: (hour: number) => boolean }[] = [
-  { label: '새벽', test: (h) => h >= 0 && h < 6 },
-  { label: '아침', test: (h) => h >= 6 && h < 11 },
-  { label: '점심', test: (h) => h >= 11 && h < 14 },
-  { label: '저녁', test: (h) => h >= 14 && h < 19 },
-  { label: '밤', test: (h) => h >= 19 && h < 24 },
+const TIME_SLOTS: { label: string }[] = [
+  { label: '새벽' },
+  { label: '아침' },
+  { label: '점심' },
+  { label: '저녁' },
+  { label: '밤' },
 ];
-
-// 푸시 알림 - 소비컷 화면에 정의된 컷 이름 (시간대/요일 기준)
-const TIMESLOT_CUT: Partial<Record<string, string>> = {
-  새벽: '새벽 감성 컷',
-  저녁: '저녁 보상 컷',
-  밤: '야간 야망 컷',
-};
-
-const WEEKDAY_CUT: Partial<Record<string, string>> = {
-  월: '월요병 텅장 컷',
-  금: '불금 입구 컷',
-  토: '주말 플렉스 컷',
-  일: '주말 플렉스 컷',
-};
-
-const EMPTY_TRANSACTIONS: Transaction[] = [];
-
-function sumExpense(items: Transaction[]) {
-  return items.reduce((sum, tx) => sum + tx.amount, 0);
-}
 
 // 쿼리 로딩/에러 중에는 숫자 자리에 placeholder 표시
 function displayAmount(query: { isPending: boolean; isError: boolean }, amount: number) {
@@ -123,14 +101,15 @@ export default function Analysis() {
     month: budgetMonth.getMonth() + 1,
   });
 
-  // 소비 분석용 월 지출 — spendMonth 기준 (카테고리 도넛 / 히트맵)
-  const spendMonthQuery = useTransactions({
+  // 소비 분석 — spendMonth 기준 (카테고리 도넛 / 히트맵), 서버 집계
+  const categoryQuery = useCategoryReport({
     year: spendMonth.getFullYear(),
     month: spendMonth.getMonth() + 1,
-    type: 'expense',
   });
-
-  const spendMonthTransactions = spendMonthQuery.data ?? EMPTY_TRANSACTIONS;
+  const heatmapQuery = useHeatmapReport({
+    year: spendMonth.getFullYear(),
+    month: spendMonth.getMonth() + 1,
+  });
 
   const walletLevelIndex = getWalletLevelIndex(scores?.wallet_temperature.level ?? '');
 
@@ -141,34 +120,19 @@ export default function Analysis() {
   const monthlyPercent = monthly && monthly.budget > 0 ? Math.min(100, Math.round(monthly.usage_rate)) : 0;
 
   const spendMonthKey = getMonthKey(spendMonth);
-  const monthExpenses = useMemo(
-    () =>
-      spendMonthTransactions.filter(
-        (tx) => tx.type === 'expense' && tx.transaction_date.startsWith(spendMonthKey),
-      ),
-    [spendMonthKey, spendMonthTransactions],
-  );
 
-  const totalSpend = sumExpense(monthExpenses);
-
+  // 서버 집계: 금액 0인 카테고리도 전부 내려오므로 amount>0만 사용. ratio는 서버 값 그대로.
   const categoryBreakdown = useMemo(() => {
-    const totals: Record<string, number> = {};
-    for (const tx of monthExpenses) {
-      totals[tx.category] = (totals[tx.category] ?? 0) + tx.amount;
-    }
-    return Object.entries(totals)
-      .map(([category, amount]) => ({
-        category,
-        amount,
-        percent: totalSpend > 0 ? Math.round((amount / totalSpend) * 100) : 0,
-      }))
+    const categories = categoryQuery.data?.categories ?? [];
+    return categories
+      .filter((c) => c.amount > 0)
+      .map((c) => ({ category: c.category, amount: c.amount, percent: c.ratio }))
       .sort((a, b) => b.amount - a.amount);
-  }, [monthExpenses, totalSpend]);
+  }, [categoryQuery.data]);
 
   const top3 = categoryBreakdown.slice(0, 3);
   const rest = categoryBreakdown.slice(3);
-  const restAmount = rest.reduce((sum, r) => sum + r.amount, 0);
-  const restPercent = totalSpend > 0 ? Math.round((restAmount / totalSpend) * 100) : 0;
+  const restPercent = rest.reduce((sum, r) => sum + r.percent, 0);
 
   const donutGradient = useMemo(() => {
     if (categoryBreakdown.length === 0) return `#ececec 0% 100%`;
@@ -187,39 +151,25 @@ export default function Analysis() {
     return stops.join(', ');
   }, [categoryBreakdown, top3, restPercent]);
 
+  // 서버는 값이 있는 셀만 준다 → 5시간대 × 7요일 그리드로 채우고 빈 셀은 0.
   const heatmap = useMemo(() => {
     const grid = TIME_SLOTS.map(() => WEEKDAYS.map(() => 0));
-    for (const tx of monthExpenses) {
-      const d = new Date(tx.transaction_date);
-      const weekdayIdx = (d.getDay() + 6) % 7; // 월=0 ... 일=6
-      const hour = Number(tx.transaction_time.split(':')[0]);
-      const slotIdx = TIME_SLOTS.findIndex((s) => s.test(hour));
-      if (slotIdx === -1) continue;
-      grid[slotIdx][weekdayIdx] += tx.amount;
+    for (const cell of heatmapQuery.data?.heatmap ?? []) {
+      const slotIdx = TIME_SLOTS.findIndex((s) => s.label === cell.time_slot);
+      const dayIdx = WEEKDAYS.indexOf(cell.day);
+      if (slotIdx === -1 || dayIdx === -1) continue;
+      grid[slotIdx][dayIdx] = cell.amount;
     }
     return grid;
-  }, [monthExpenses]);
+  }, [heatmapQuery.data]);
 
   const maxCell = Math.max(1, ...heatmap.flat());
 
   const insightMessage = useMemo(() => {
-    let peak = { slotIdx: -1, dayIdx: -1, amount: 0 };
-    heatmap.forEach((row, slotIdx) => {
-      row.forEach((amount, dayIdx) => {
-        if (amount > peak.amount) peak = { slotIdx, dayIdx, amount };
-      });
-    });
-    if (peak.amount === 0) return null;
-
-    const cuts: string[] = [];
-    const timeCut = TIMESLOT_CUT[TIME_SLOTS[peak.slotIdx]?.label ?? ''];
-    if (timeCut) cuts.push(timeCut);
-    const dayCut = WEEKDAY_CUT[WEEKDAYS[peak.dayIdx]];
-    if (dayCut && !cuts.includes(dayCut)) cuts.push(dayCut);
-    if (cuts.length === 0) cuts.push('루틴 소비 컷');
-
-    return { highlight: cuts.join(' / '), suffix: '이 작동 중이에요' };
-  }, [heatmap]);
+    const peak = heatmapQuery.data?.peak;
+    if (!peak) return null;
+    return { highlight: peak.notification_label, suffix: '이 작동 중이에요' };
+  }, [heatmapQuery.data]);
 
   const remainText = (remain: number) =>
     remain >= 0 ? `예산이 ${remain.toLocaleString()}원 남았어요` : `예산을 ${Math.abs(remain).toLocaleString()}원 초과했어요`;
@@ -342,9 +292,9 @@ export default function Analysis() {
 
         <DonutRow>
           <Donut $gradient={donutGradient} />
-          {spendMonthQuery.isPending ? (
+          {categoryQuery.isPending ? (
             <EmptyText>—</EmptyText>
-          ) : spendMonthQuery.isError ? (
+          ) : categoryQuery.isError ? (
             <EmptyText>불러오지 못했어요</EmptyText>
           ) : top3.length === 0 ? (
             <EmptyText>이 달의 소비 내역이 없어요.</EmptyText>
@@ -415,11 +365,11 @@ export default function Analysis() {
           ))}
         </HeatmapWrap>
 
-        {spendMonthQuery.isPending ? (
+        {heatmapQuery.isPending ? (
           <EmptyText>—</EmptyText>
-        ) : spendMonthQuery.isError ? (
+        ) : heatmapQuery.isError ? (
           <EmptyText>불러오지 못했어요</EmptyText>
-        ) : monthExpenses.length === 0 ? (
+        ) : (heatmapQuery.data?.heatmap.length ?? 0) === 0 ? (
           <EmptyText>데이터가 없어요</EmptyText>
         ) : null}
 
