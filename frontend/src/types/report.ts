@@ -13,6 +13,8 @@ export type ImpulseReport = {
     regret_score: number;
   };
   emotion_breakdown: Record<string, number>;
+  peer_avg_impulse_score: number | null;
+  week_over_week: { this_week: number; last_week: number; diff: number };
   top_impulse_transactions: {
     id: number;
     merchant: string;
@@ -65,6 +67,8 @@ export type MonthlyForecast = {
   predicted_remaining: number;
   is_over_budget: boolean;
   confidence: string;
+  history: { year: number; month: number; spent: number }[];
+  monthly_average: number;
 };
 
 // GET /reports/scores (상단 3개 카드: 지갑 온도 / 충동 지수 / BPTI)
