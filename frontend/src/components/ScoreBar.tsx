@@ -9,6 +9,10 @@ type ScoreBarProps = {
   color?: string;
 };
 
+// 게이지 바가 카드 가장자리에 붙지 않도록 좌우로 확보하는 여백.
+// 마커/라벨의 0~100% 위치 계산도 이 안쪽 영역(Inner) 기준으로 맞춘다.
+const EDGE_PADDING = 24;
+
 export default function ScoreBar({
   value,
   max,
@@ -17,26 +21,50 @@ export default function ScoreBar({
   markerValueLabel,
   color = '#FF7D7D',
 }: ScoreBarProps) {
-  const valuePercent = Math.min(100, Math.max(0, (value / max) * 100));
-  const markerPercent = Math.min(100, Math.max(0, (markerValue / max) * 100));
+  const valueRatio = max > 0 ? Math.min(1, Math.max(0, value / max)) : 0;
+  const markerRatio = max > 0 ? Math.min(1, Math.max(0, markerValue / max)) : 0;
+
+  const markerLeft = `${markerRatio * 100}%`;
+
+  // 마커가 양 끝에 가까우면 중앙 정렬(translateX(-50%)) 시 라벨이 영역 밖으로 빠져나가므로
+  // 좌측 끝에서는 좌측 정렬, 우측 끝에서는 우측 정렬로 분기한다.
+  const labelTransform =
+    markerRatio < 0.1
+      ? 'translateX(0)'
+      : markerRatio > 0.9
+        ? 'translateX(-100%)'
+        : 'translateX(-50%)';
 
   return (
     <Wrap>
-      <Track>
-        <Fill style={{ width: `${valuePercent}%`, background: color }} />
-        <Marker style={{ left: `${markerPercent}%` }}>
+      <Inner>
+        <Track>
+          <Fill style={{ width: `${valueRatio * 100}%`, background: color }} />
+        </Track>
+
+        {/* 점선 마커와 라벨은 같은 Inner 안에서 동일한 markerLeft 기준을 공유한다. */}
+        <Marker style={{ left: markerLeft }}>
           <Scissors>✂</Scissors>
+          <MarkerStem />
         </Marker>
-      </Track>
-      <MarkerLabel style={{ left: `${markerPercent}%` }}>{markerLabel}</MarkerLabel>
-      {markerValueLabel && <MarkerValueLabel style={{ left: `${markerPercent}%` }}>{markerValueLabel}</MarkerValueLabel>}
+
+        <LabelGroup style={{ left: markerLeft, transform: labelTransform }}>
+          <MarkerLabel>{markerLabel}</MarkerLabel>
+          {markerValueLabel && <MarkerValueLabel>{markerValueLabel}</MarkerValueLabel>}
+        </LabelGroup>
+      </Inner>
     </Wrap>
   );
 }
 
 const Wrap = styled.div`
   width: 100%;
-  padding-bottom: 4px;
+  padding: 14px ${EDGE_PADDING}px 40px;
+`;
+
+const Inner = styled.div`
+  position: relative;
+  width: 100%;
 `;
 
 const Track = styled.div`
@@ -56,19 +84,19 @@ const Fill = styled.div`
 
 const Marker = styled.div`
   position: absolute;
-  top: -14px;
+  top: -12px;
   transform: translateX(-50%);
   display: flex;
   flex-direction: column;
   align-items: center;
+  pointer-events: none;
+`;
 
-  &::after {
-    content: '';
-    width: 0;
-    height: 26px;
-    border-left: 1px dashed #666;
-    margin-top: 2px;
-  }
+const MarkerStem = styled.div`
+  width: 0;
+  height: 26px;
+  border-left: 1px dashed #666;
+  margin-top: 2px;
 `;
 
 const Scissors = styled.span`
@@ -76,20 +104,23 @@ const Scissors = styled.span`
   transform: rotate(90deg);
 `;
 
+const LabelGroup = styled.div`
+  position: absolute;
+  top: 100%;
+  margin-top: 6px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  white-space: nowrap;
+`;
+
 const MarkerLabel = styled.div`
-  position: relative;
-  width: fit-content;
-  transform: translateX(-50%);
-  margin-top: 4px;
   font-size: 10px;
   color: #888;
   white-space: nowrap;
 `;
 
 const MarkerValueLabel = styled.div`
-  position: relative;
-  width: fit-content;
-  transform: translateX(-50%);
   margin-top: 2px;
   font-size: 11px;
   font-weight: 700;
