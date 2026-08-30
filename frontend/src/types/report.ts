@@ -66,3 +66,45 @@ export type MonthlyForecast = {
   is_over_budget: boolean;
   confidence: string;
 };
+
+// GET /reports/scores (상단 3개 카드: 지갑 온도 / 충동 지수 / BPTI)
+export type Scores = {
+  impulse_score: number;
+  wallet_temperature: {
+    my_temp: number;
+    peer_avg_temp: number;
+    diff: number;
+    level: string;
+    emoji: string;
+    message: string;
+  };
+  bpti: {
+    type: string;
+    label: string;
+    definition: string;
+    message: string;
+  };
+};
+
+// GET /reports/budget-status (year/month optional — 없으면 이번 달)
+export type BudgetStatus = {
+  monthly: {
+    budget: number;
+    spent: number;
+    remaining: number;
+    usage_rate: number;
+  };
+  weekly: {
+    current_week: number;
+    budget: number;
+    spent: number;
+    remaining: number;
+    usage_rate: number;
+  };
+  weekly_breakdown: {
+    week: number;
+    budget: number;
+    spent: number;
+    usage_rate: number;
+  }[];
+};
