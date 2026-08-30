@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import styled from 'styled-components';
 import Modal from './Modal';
 import DateTimePickerField from './DateTimePickerField';
@@ -8,6 +9,9 @@ import { CATEGORY_OPTIONS } from '../utils/category';
 import { classifyCategory } from '../utils/classifyCategory';
 import { parseSpendingText } from '../utils/parseSpendingText';
 import { formatSlashDateTime } from '../utils/date';
+import { useEmotions } from '../hooks/useEmotions';
+import { createTransaction, tagTransactionEmotions } from '../api/transactions';
+import { ApiError } from '../api/client';
 import angleRightIcon from '../assets/images/angle_right.svg';
 
 // Q1 버튼 전용 카피(질문-답변 프레이밍). 태그 표현과 무관한 UI 문구라 TAG_LABEL과 분리한다.
@@ -45,14 +49,62 @@ export default function ExpenseCaptureModal({ rawText, onClose }: ExpenseCapture
   const [planTag, setPlanTag] = useState<string | null>(null);
   const [contextTags, setContextTags] = useState<string[]>([]);
 
+  const queryClient = useQueryClient();
+  const { data: emotions = [], isLoading: emotionsLoading } = useEmotions();
+
+  const emotionIdByName = useMemo(
+    () => Object.fromEntries(emotions.map((tag) => [tag.name, tag.id])),
+    [emotions],
+  );
+
   const toggleContextTag = (tag: string) => {
     setContextTags((prev) => (prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]));
   };
 
+  // AddExpense.tsx의 저장 흐름(createTransaction → tagTransactionEmotions)과 동일한 패턴.
+  const saveMutation = useMutation({
+    mutationFn: async ({ withTags }: { withTags: boolean }) => {
+      const { id } = await createTransaction({
+        amount: Number(amount),
+        type: 'expense',
+        category,
+        merchant,
+        description: '',
+        transaction_date: date,
+        // parseSpendingText/DateTimePickerField 모두 'HH:mm'을 주지만, 초가 붙어 있으면 잘라낸다.
+        // createTransaction 래퍼가 ':00'을 더해 백엔드가 요구하는 'HH:mm:ss'로 만든다.
+        transaction_time: time.slice(0, 5),
+      });
+
+      if (!withTags) return;
+
+      const tagNames = [planTag, ...contextTags].filter((name): name is string => name !== null);
+      const emotionTagIds = tagNames
+        .map((name) => emotionIdByName[name])
+        .filter((tagId): tagId is number => tagId !== undefined);
+
+      if (emotionTagIds.length > 0) {
+        await tagTransactionEmotions(id, emotionTagIds);
+      }
+    },
+    onSuccess: () => {
+      // 목록/홈에 바로 반영되도록 무효화. 태그를 건너뛴 거래는 이후 TransactionDetail에서 붙일 수 있다.
+      queryClient.invalidateQueries({ queryKey: ['transactions'] });
+    },
+  });
+
+  const saveErrorMessage = saveMutation.isError
+    ? saveMutation.error instanceof ApiError
+      ? saveMutation.error.message
+      : '등록에 실패했어요. 다시 시도해주세요.'
+    : '';
+
   const record = () => {
-    // TODO: 실제 API 연동
-    console.log({ planTag, contextTags });
-    setStep('result');
+    saveMutation.mutate({ withTags: true }, { onSuccess: () => setStep('result') });
+  };
+
+  const recordWithoutTags = () => {
+    saveMutation.mutate({ withTags: false }, { onSuccess: () => onClose() });
   };
 
   if (step === 'result') {
@@ -127,10 +179,16 @@ export default function ExpenseCaptureModal({ rawText, onClose }: ExpenseCapture
             onToggleContextTag={toggleContextTag}
           />
 
-          <RecordButton type="button" disabled={planTag === null} onClick={record}>
+          {saveErrorMessage && <ErrorText>{saveErrorMessage}</ErrorText>}
+
+          <RecordButton
+            type="button"
+            disabled={planTag === null || emotionsLoading || saveMutation.isPending}
+            onClick={record}
+          >
             기록 완료
           </RecordButton>
-          <SkipButton type="button" onClick={onClose}>
+          <SkipButton type="button" onClick={recordWithoutTags} disabled={saveMutation.isPending}>
             나중에 태그할게요
           </SkipButton>
         </StepCard>
@@ -387,6 +445,14 @@ const SkipButton = styled.button`
   text-align: center;
   margin-top: 8px;
   cursor: pointer;
+`;
+
+// AddExpense.tsx의 ErrorText와 동일한 스타일.
+const ErrorText = styled.p`
+  color: #e74c3c;
+  font-size: 12px;
+  text-align: center;
+  margin: 8px 0 16px;
 `;
 
 const InlineFieldList = styled.div`
