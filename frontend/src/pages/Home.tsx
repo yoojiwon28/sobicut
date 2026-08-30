@@ -18,6 +18,7 @@ import {
   WALLET_BADGE_COLORS,
   getWalletLevelIndex,
 } from '../utils/wallet';
+import { useScores } from '../hooks/useReports';
 
 
 // TODO: 알림 여부 실제 알림 API
@@ -26,24 +27,6 @@ const hasNotification = true;
 // TODO: 실제로는 새 결제 문자 감지 시 서버에서 파싱+LLM 분류된 값을 내려받아 모달로 표시
 const hasPendingCapture = true;
 
-// GET /reports/scores 더미데이터
-const DUMMY_SCORES = {
-  impulse_score: 50,
-  wallet_temperature: {
-    my_temp: 110,
-    peer_avg_temp: 110,
-    diff: 7,
-    level: '과열',
-    emoji: '😐',
-    message: '지갑이 적당히 데워지고 있어요. 이 흐름을 유지해보세요',
-  },
-  bpti: {
-    type: 'FIRE',
-    label: '불지옥',
-    definition: '홧김 비용의 지배자',
-    message: '화가 날 때 지갑을 여는 타입! 스트레스 해소법을 돈 쓰기 말고 다른 걸로 찾아봐요.',
-  },
-};
 
 export default function Home() {
   const navigate = useNavigate();
@@ -54,13 +37,18 @@ export default function Home() {
     queryFn: getSettings,
   });
 
+  const { data: scores } = useScores();
+  const impulseScore = scores?.impulse_score ?? 0;
+  const myTemp = scores?.wallet_temperature.my_temp ?? 0;
+  const walletLevel = scores?.wallet_temperature.level ?? '';
+
   const today = toDateKey(new Date());
   const { data: todayExpenses = [] } = useQuery({
     queryKey: ['transactions', { date: today, type: 'expense' }],
     queryFn: () => getTransactions({ date: today, type: 'expense' }),
   });
 
-  const levelIndex = getWalletLevelIndex(DUMMY_SCORES.wallet_temperature.level);
+  const levelIndex = getWalletLevelIndex(walletLevel);
   const walletImage = WALLET_IMAGES[levelIndex];
   const walletStatusText = WALLET_STATUS_TEXT[levelIndex];
   const gaugeColor = WALLET_GAUGE_COLORS[levelIndex];
@@ -69,10 +57,10 @@ export default function Home() {
   const ARC_LENGTH = 130 * (Math.PI / 2); // 반지름 130, 90° 부채꼴 호 길이 ≈ 204.2
 
   const MIN_VISIBLE_PERCENT = 8;
-  const tempPercent = DUMMY_SCORES.wallet_temperature.my_temp > 0
-    ? Math.max(MIN_VISIBLE_PERCENT, Math.min(100, DUMMY_SCORES.wallet_temperature.my_temp))
+  const tempPercent = myTemp > 0
+    ? Math.max(MIN_VISIBLE_PERCENT, Math.min(100, myTemp))
     : 0;
-  const impulsePercent = Math.min(100, Math.max(0, DUMMY_SCORES.impulse_score));
+  const impulsePercent = Math.min(100, Math.max(0, impulseScore));
 
   const tempDashOn = (tempPercent / 100) * ARC_LENGTH;
   const impulseDashOn = (impulsePercent / 100) * ARC_LENGTH;
@@ -104,11 +92,11 @@ export default function Home() {
         <ScoreHeaders>
           <ScoreHeaderItem>
             <ScoreLabel>🌡️ 지갑 온도</ScoreLabel>
-            <ScoreValue>{DUMMY_SCORES.wallet_temperature.my_temp}°C</ScoreValue>
+            <ScoreValue>{myTemp}°C</ScoreValue>
           </ScoreHeaderItem>
           <ScoreHeaderItem $align="right">
             <ScoreLabel>⚡ 충동 지수</ScoreLabel>
-            <ScoreValue>{DUMMY_SCORES.impulse_score}점</ScoreValue>
+            <ScoreValue>{impulseScore}점</ScoreValue>
           </ScoreHeaderItem>
         </ScoreHeaders>
 
