@@ -13,14 +13,6 @@ import {
   useMonthlyForecast,
 } from '../../hooks/useReports';
 
-// GET /reports/impulse 응답에 아직 없는 값 (목데이터 유지)
-const DUMMY_IMPULSE = {
-  // TODO: 백엔드 API 추가 후 교체 예정 (현재 응답에 없음)
-  lastWeekScore: 60,
-  // TODO: 백엔드 API 추가 후 교체 예정 (현재 응답에 없음)
-  peerAverage: 60,
-};
-
 // API 값이 0~100 스케일이므로 max 는 100
 const BPTI_TAG_MAX = 100;
 
@@ -28,23 +20,6 @@ const CHART_H = 190;
 const VALUE_H = 34;
 const LABEL_H = 27;
 const TRACK_H = CHART_H - VALUE_H - LABEL_H;
-
-// GET /reports/monthly-forecast 응답에 아직 없는 값 (막대 차트용 목데이터 유지)
-const DUMMY_FORECAST = {
-  // TODO: 백엔드 API 추가 후 교체 예정 (현재 응답에 없음)
-  monthlyAverage: 1200000,
-  // TODO: 백엔드 API 추가 후 교체 예정 (현재 응답에 없음)
-  lastMonthLabel: '2월',
-  // TODO: 백엔드 API 추가 후 교체 예정 (현재 응답에 없음)
-  lastMonthAmount: 1300000,
-  // TODO: 백엔드 API 추가 후 교체 예정 (현재 응답에 없음)
-  history: [
-    { label: '11월', amount: 1100000 },
-    { label: '12월', amount: 1200000 },
-    { label: '1월', amount: 1000000 },
-    { label: '2월', amount: 1300000 },
-  ],
-};
 
 export default function SpendingReport() {
   const navigate = useNavigate();
@@ -68,7 +43,8 @@ export default function SpendingReport() {
   const forecast = forecastQuery.data;
 
   const impulseScore = impulse?.impulse_score;
-  const impulseDiff = impulseScore != null ? impulseScore - DUMMY_IMPULSE.lastWeekScore : 0;
+  const weekOverWeek = impulse?.week_over_week;
+  const impulseDiff = weekOverWeek?.diff ?? 0;
 
   const myTemp = wallet?.my_temp;
   const peerAvgTemp = wallet?.peer_avg_temp;
@@ -86,8 +62,16 @@ export default function SpendingReport() {
   const predictedTotal = forecast?.predicted_total ?? 0;
   const budgetLine = forecast?.budget ?? 0;
   const forecastOverBudget = forecast ? predictedTotal > budgetLine : false;
-  const chartBars = [...DUMMY_FORECAST.history, { label: '이번 달', amount: predictedTotal, isForecast: true }];
-  const chartMax = Math.max(...chartBars.map((b) => b.amount));
+  const forecastHistory = (forecast?.history ?? []).map((h) => ({
+    label: `${h.month}월`,
+    amount: h.spent,
+  }));
+  const monthlyAverage = forecast?.monthly_average ?? 0;
+  const lastMonth = forecastHistory[forecastHistory.length - 1];
+  const lastMonthLabel = lastMonth?.label ?? '—';
+  const lastMonthAmount = lastMonth?.amount ?? 0;
+  const chartBars = [...forecastHistory, { label: '이번 달', amount: predictedTotal, isForecast: true }];
+  const chartMax = Math.max(0, ...chartBars.map((b) => b.amount));
   const budgetLinePercent = chartMax > 0 ? (budgetLine / chartMax) * 100 : 0;
 
   return (
@@ -106,7 +90,7 @@ export default function SpendingReport() {
                 <ImpulseStrong>{impulseScore ?? '—'}점</ImpulseStrong>이에요
               </Headline>
               <DiffBadge>
-                {impulseScore != null ? (
+                {weekOverWeek != null ? (
                   <>
                     {impulseDiff >= 0 ? '▲' : '▼'} 지난주보다 {Math.abs(impulseDiff)}점
                   </>
@@ -228,9 +212,9 @@ export default function SpendingReport() {
               이번 달 예상 지출액은 {forecast ? `${predictedTotal.toLocaleString()}원` : '—'}
             </ForecastHeadline>
             <ForecastSubText>
-              나의 한달 평균 지출액은 {Math.round(DUMMY_FORECAST.monthlyAverage / 10000)}만원
+              나의 한달 평균 지출액은 {Math.round(monthlyAverage / 10000)}만원
               <br />
-              {DUMMY_FORECAST.lastMonthLabel}에는 {Math.round(DUMMY_FORECAST.lastMonthAmount / 10000)}만원 썼어요
+              {lastMonthLabel}에는 {Math.round(lastMonthAmount / 10000)}만원 썼어요
             </ForecastSubText>
 
             {forecastOverBudget && <WarningText>예산 초과 예상: 과소비에 주의하세요!</WarningText>}
