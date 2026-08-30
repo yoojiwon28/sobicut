@@ -6,52 +6,38 @@ import ScoreBar from '../../components/ScoreBar';
 import RadarChart from '../../components/RadarChart';
 import { PageWrap } from '../../styles/auth.styles';
 import { WALLET_IMAGES, WALLET_GAUGE_COLORS, getWalletLevelIndex } from '../../utils/wallet';
+import {
+  useImpulseReport,
+  useBptiReport,
+  useWalletTemperature,
+  useMonthlyForecast,
+} from '../../hooks/useReports';
 
-// GET /reports/impulse 더미데이터
+// GET /reports/impulse 응답에 아직 없는 값 (목데이터 유지)
 const DUMMY_IMPULSE = {
-  score: 67,
+  // TODO: 백엔드 API 추가 후 교체 예정 (현재 응답에 없음)
   lastWeekScore: 60,
+  // TODO: 백엔드 API 추가 후 교체 예정 (현재 응답에 없음)
   peerAverage: 60,
 };
 
-// GET /reports/bpti 더미데이터
-const DUMMY_BPTI = {
-  type: 'FIRE',
-  label: '불지옥',
-  definition: '홧김 비용의 지배자',
-  message: '화가 날 때 지갑을 여는 타입! 스트레스 해소법을 돈 쓰기 말고 다른 걸로 찾아봐요.',
-  tags: [
-    { label: '스트레스', value: 9 },
-    { label: '무의식', value: 5 },
-    { label: '귀찮음', value: 4 },
-    { label: '성취', value: 3 },
-    { label: '행복', value: 3 },
-    { label: '고마움', value: 2 },
-  ],
-  tagMax: 10,
-};
-
-// GET /reports/wallet-temperature 더미데이터
-const DUMMY_WALLET = {
-  myTemp: 72,
-  peerAvgTemp: 65,
-  level: '임계',
-  income: 900000,
-  spending: 250000,
-};
+// API 값이 0~100 스케일이므로 max 는 100
+const BPTI_TAG_MAX = 100;
 
 const CHART_H = 190;
 const VALUE_H = 34;
 const LABEL_H = 27;
 const TRACK_H = CHART_H - VALUE_H - LABEL_H;
 
-// GET /reports/forecast 더미데이터
+// GET /reports/monthly-forecast 응답에 아직 없는 값 (막대 차트용 목데이터 유지)
 const DUMMY_FORECAST = {
-  forecast: 1554000,
+  // TODO: 백엔드 API 추가 후 교체 예정 (현재 응답에 없음)
   monthlyAverage: 1200000,
+  // TODO: 백엔드 API 추가 후 교체 예정 (현재 응답에 없음)
   lastMonthLabel: '2월',
+  // TODO: 백엔드 API 추가 후 교체 예정 (현재 응답에 없음)
   lastMonthAmount: 1300000,
-  budgetLine: 1300000,
+  // TODO: 백엔드 API 추가 후 교체 예정 (현재 응답에 없음)
   history: [
     { label: '11월', amount: 1100000 },
     { label: '12월', amount: 1200000 },
@@ -65,142 +51,213 @@ export default function SpendingReport() {
   const location = useLocation();
   const walletSectionRef = useRef<HTMLDivElement>(null);
 
+  const impulseQuery = useImpulseReport();
+  const bptiQuery = useBptiReport();
+  const walletQuery = useWalletTemperature();
+  const forecastQuery = useMonthlyForecast();
+
   useEffect(() => {
     if (location.hash === '#wallet') {
       walletSectionRef.current?.scrollIntoView({ block: 'start' });
     }
   }, [location.hash]);
 
-  const impulseDiff = DUMMY_IMPULSE.score - DUMMY_IMPULSE.lastWeekScore;
-  const walletDiff = DUMMY_WALLET.myTemp - DUMMY_WALLET.peerAvgTemp;
-  const walletLevelIndex = getWalletLevelIndex(DUMMY_WALLET.level);
-  const walletRemain = DUMMY_WALLET.income - DUMMY_WALLET.spending;
+  const impulse = impulseQuery.data;
+  const bpti = bptiQuery.data;
+  const wallet = walletQuery.data;
+  const forecast = forecastQuery.data;
 
-  const forecastOverBudget = DUMMY_FORECAST.forecast > DUMMY_FORECAST.budgetLine;
-  const chartBars = [...DUMMY_FORECAST.history, { label: '이번 달', amount: DUMMY_FORECAST.forecast, isForecast: true }];
+  const impulseScore = impulse?.impulse_score;
+  const impulseDiff = impulseScore != null ? impulseScore - DUMMY_IMPULSE.lastWeekScore : 0;
+
+  const myTemp = wallet?.my_temp;
+  const peerAvgTemp = wallet?.peer_avg_temp;
+  const walletDiff = myTemp != null && peerAvgTemp != null ? myTemp - peerAvgTemp : 0;
+  const walletLevelIndex = getWalletLevelIndex(wallet?.level ?? '');
+  const walletGaugeColor = WALLET_GAUGE_COLORS[walletLevelIndex];
+  const walletBudget = wallet?.my_budget ?? 0;
+  const walletSpent = wallet?.my_spent ?? 0;
+  const walletRemain = walletBudget - walletSpent;
+
+  const bptiAxes = bpti
+    ? Object.entries(bpti.emotion_radar).map(([label, value]) => ({ label, value }))
+    : [];
+
+  const predictedTotal = forecast?.predicted_total ?? 0;
+  const budgetLine = forecast?.budget ?? 0;
+  const forecastOverBudget = forecast ? predictedTotal > budgetLine : false;
+  const chartBars = [...DUMMY_FORECAST.history, { label: '이번 달', amount: predictedTotal, isForecast: true }];
   const chartMax = Math.max(...chartBars.map((b) => b.amount));
-  const budgetLinePercent = (DUMMY_FORECAST.budgetLine / chartMax) * 100;
+  const budgetLinePercent = chartMax > 0 ? (budgetLine / chartMax) * 100 : 0;
 
   return (
     <PageWrap>
       <BackButton to="/analysis" />
 
       <Card>
-        <CardTop>
-          <Headline>
-            나의 충동 지수는
-            <br />
-            <ImpulseStrong>{DUMMY_IMPULSE.score}점</ImpulseStrong>이에요
-          </Headline>
-          <DiffBadge>
-            {impulseDiff >= 0 ? '▲' : '▼'} 지난주보다 {Math.abs(impulseDiff)}점
-          </DiffBadge>
-        </CardTop>
+        {impulseQuery.isError ? (
+          <CardError>불러오지 못했어요</CardError>
+        ) : (
+          <>
+            <CardTop>
+              <Headline>
+                나의 충동 지수는
+                <br />
+                <ImpulseStrong>{impulseScore ?? '—'}점</ImpulseStrong>이에요
+              </Headline>
+              <DiffBadge>
+                {impulseScore != null ? (
+                  <>
+                    {impulseDiff >= 0 ? '▲' : '▼'} 지난주보다 {Math.abs(impulseDiff)}점
+                  </>
+                ) : (
+                  '지난주보다 —점'
+                )}
+              </DiffBadge>
+            </CardTop>
 
-        <ImpulseTrack>
-          <ImpulseFill style={{ width: `${Math.min(100, Math.max(0, DUMMY_IMPULSE.score))}%` }} />
-        </ImpulseTrack>
+            <ImpulseTrack>
+              <ImpulseFill
+                style={{ width: `${Math.min(100, Math.max(0, impulseScore ?? 0))}%` }}
+              />
+            </ImpulseTrack>
 
-        <ReasonButton type="button" onClick={() => navigate('/analysis/report/impulse')}>
-          내 점수 이유 확인하기→
-        </ReasonButton>
+            <ReasonButton type="button" onClick={() => navigate('/analysis/report/impulse')}>
+              내 점수 이유 확인하기→
+            </ReasonButton>
+          </>
+        )}
       </Card>
 
       <Card>
-        <BptiTitle>나의 소비성격유형 BPTI는</BptiTitle>
-        <BptiType>[ {DUMMY_BPTI.type} - {DUMMY_BPTI.label} ]</BptiType>
-        <BptiDefinition>{DUMMY_BPTI.definition}</BptiDefinition>
+        {bptiQuery.isError ? (
+          <CardError>불러오지 못했어요</CardError>
+        ) : (
+          <>
+            <BptiTitle>나의 소비성격유형 BPTI는</BptiTitle>
+            <BptiType>[ {bpti?.type ?? '—'} - {bpti?.label ?? '—'} ]</BptiType>
+            <BptiDefinition>{bpti?.definition ?? '—'}</BptiDefinition>
 
-        <RadarChart axes={DUMMY_BPTI.tags} max={DUMMY_BPTI.tagMax} />
+            <RadarChart axes={bptiAxes} max={BPTI_TAG_MAX} />
 
-        <BptiMessage>{DUMMY_BPTI.message}</BptiMessage>
+            <BptiMessage>{bpti?.message ?? '—'}</BptiMessage>
+          </>
+        )}
       </Card>
 
       <Card ref={walletSectionRef}>
-        <Headline>
-          나의 지갑 온도는
-          <br />
-          <WalletTempStrong $color={WALLET_GAUGE_COLORS[walletLevelIndex]}>{DUMMY_WALLET.myTemp}°C</WalletTempStrong> !
-        </Headline>
-        <SubText>
-          나와 비슷한 친구들 평균({DUMMY_WALLET.peerAvgTemp}°C)보다 {Math.abs(walletDiff)}°C 더{' '}
-          {walletDiff >= 0 ? '뜨거워요!' : '차가워요!'}
-          <br />
-          친구들보다 {walletDiff >= 0 ? '빠르게' : '느리게'} 예산을 소비하고 있어요
-        </SubText>
+        {walletQuery.isError ? (
+          <CardError>불러오지 못했어요</CardError>
+        ) : (
+          <>
+            <Headline>
+              나의 지갑 온도는
+              <br />
+              <WalletTempStrong $color={walletGaugeColor}>{myTemp ?? '—'}°C</WalletTempStrong> !
+            </Headline>
+            <SubText>
+              {myTemp != null && peerAvgTemp != null ? (
+                <>
+                  나와 비슷한 친구들 평균({peerAvgTemp}°C)보다 {Math.abs(walletDiff)}°C 더{' '}
+                  {walletDiff >= 0 ? '뜨거워요!' : '차가워요!'}
+                  <br />
+                  친구들보다 {walletDiff >= 0 ? '빠르게' : '느리게'} 예산을 소비하고 있어요
+                </>
+              ) : (
+                <>
+                  나와 비슷한 친구들 평균(—°C)보다 —°C 더 뜨거워요!
+                  <br />
+                  친구들보다 빠르게 예산을 소비하고 있어요
+                </>
+              )}
+            </SubText>
 
-        <WalletIconBox>
-          <img src={WALLET_IMAGES[walletLevelIndex]} alt={DUMMY_WALLET.level} width={110} height={110} />
-        </WalletIconBox>
+            <WalletIconBox>
+              <img src={WALLET_IMAGES[walletLevelIndex]} alt={wallet?.level ?? ''} width={110} height={110} />
+            </WalletIconBox>
 
-        <BarWrap>
-          <ScoreBar
-            value={DUMMY_WALLET.myTemp}
-            max={120}
-            markerValue={DUMMY_WALLET.peerAvgTemp}
-            markerLabel="또래 평균 온도"
-            markerValueLabel={`${DUMMY_WALLET.peerAvgTemp}°C`}
-            color={WALLET_GAUGE_COLORS[walletLevelIndex]}
-          />
-        </BarWrap>
+            <BarWrap>
+              <ScoreBar
+                value={myTemp ?? 0}
+                max={120}
+                markerValue={peerAvgTemp ?? 0}
+                markerLabel="또래 평균 온도"
+                markerValueLabel={`${peerAvgTemp ?? '—'}°C`}
+                color={walletGaugeColor}
+              />
+            </BarWrap>
 
-        <WalletLevelRow>
-          {WALLET_IMAGES.map((img, i) => (
-            <WalletLevelImg key={i} src={img} alt="" $active={i === walletLevelIndex} />
-          ))}
-        </WalletLevelRow>
+            <WalletLevelRow>
+              {WALLET_IMAGES.map((img, i) => (
+                <WalletLevelImg key={i} src={img} alt="" $active={i === walletLevelIndex} />
+              ))}
+            </WalletLevelRow>
+          </>
+        )}
       </Card>
 
       <Card>
-        <WalletStatusCard>
-          <WalletStatusTitle>이번 달 지갑 현황</WalletStatusTitle>
-          <WalletStatusRow>
-            <span>수입</span>
-            <strong>{DUMMY_WALLET.income.toLocaleString()}원</strong>
-          </WalletStatusRow>
-          <WalletStatusRow>
-            <span>소비</span>
-            <strong>{DUMMY_WALLET.spending.toLocaleString()}원</strong>
-          </WalletStatusRow>
-          <WalletStatusDivider />
-          <WalletStatusRow>
-            <span>남은 금액</span>
-            <strong>{walletRemain.toLocaleString()}원</strong>
-          </WalletStatusRow>
-        </WalletStatusCard>
+        {walletQuery.isError ? (
+          <CardError>불러오지 못했어요</CardError>
+        ) : (
+          <WalletStatusCard>
+            <WalletStatusTitle>이번 달 지갑 현황</WalletStatusTitle>
+            <WalletStatusRow>
+              <span>수입</span>
+              <strong>{wallet ? `${walletBudget.toLocaleString()}원` : '—'}</strong>
+            </WalletStatusRow>
+            <WalletStatusRow>
+              <span>소비</span>
+              <strong>{wallet ? `${walletSpent.toLocaleString()}원` : '—'}</strong>
+            </WalletStatusRow>
+            <WalletStatusDivider />
+            <WalletStatusRow>
+              <span>남은 금액</span>
+              <strong>{wallet ? `${walletRemain.toLocaleString()}원` : '—'}</strong>
+            </WalletStatusRow>
+          </WalletStatusCard>
+        )}
       </Card>
 
       <Card>
-        <ForecastHeadline>이번 달 예상 지출액은 {DUMMY_FORECAST.forecast.toLocaleString()}원</ForecastHeadline>
-        <ForecastSubText>
-          나의 한달 평균 지출액은 {Math.round(DUMMY_FORECAST.monthlyAverage / 10000)}만원
-          <br />
-          {DUMMY_FORECAST.lastMonthLabel}에는 {Math.round(DUMMY_FORECAST.lastMonthAmount / 10000)}만원 썼어요
-        </ForecastSubText>
+        {forecastQuery.isError ? (
+          <CardError>불러오지 못했어요</CardError>
+        ) : (
+          <>
+            <ForecastHeadline>
+              이번 달 예상 지출액은 {forecast ? `${predictedTotal.toLocaleString()}원` : '—'}
+            </ForecastHeadline>
+            <ForecastSubText>
+              나의 한달 평균 지출액은 {Math.round(DUMMY_FORECAST.monthlyAverage / 10000)}만원
+              <br />
+              {DUMMY_FORECAST.lastMonthLabel}에는 {Math.round(DUMMY_FORECAST.lastMonthAmount / 10000)}만원 썼어요
+            </ForecastSubText>
 
-        {forecastOverBudget && <WarningText>예산 초과 예상: 과소비에 주의하세요!</WarningText>}
+            {forecastOverBudget && <WarningText>예산 초과 예상: 과소비에 주의하세요!</WarningText>}
 
-        <ChartWrap>
-          <BudgetLine style={{ bottom: `${LABEL_H + (TRACK_H * budgetLinePercent) / 100}px` }}>
-            <BudgetLineScissors>✂</BudgetLineScissors>
-          </BudgetLine>
-          <ChartBars>
-            {chartBars.map((bar) => (
-              <ChartBarColumn key={bar.label}>
-                <ChartBarTrack>
-                  <ChartBarBarWrap style={{ height: `${(bar.amount / chartMax) * 100}%` }}>
-                    <ChartBarValue $forecast={'isForecast' in bar && bar.isForecast}>
-                      {Math.round(bar.amount / 10000)}
-                      {'isForecast' in bar && bar.isForecast && <ForecastTag>예상</ForecastTag>}
-                    </ChartBarValue>
-                    <ChartBar $forecast={'isForecast' in bar && bar.isForecast} />
-                  </ChartBarBarWrap>
-                </ChartBarTrack>
-                <ChartBarLabel>{bar.label}</ChartBarLabel>
-              </ChartBarColumn>
-            ))}
-          </ChartBars>
-        </ChartWrap>
+            <ChartWrap>
+              <BudgetLine style={{ bottom: `${LABEL_H + (TRACK_H * budgetLinePercent) / 100}px` }}>
+                <BudgetLineScissors>✂</BudgetLineScissors>
+              </BudgetLine>
+              <ChartBars>
+                {chartBars.map((bar) => (
+                  <ChartBarColumn key={bar.label}>
+                    <ChartBarTrack>
+                      <ChartBarBarWrap style={{ height: `${chartMax > 0 ? (bar.amount / chartMax) * 100 : 0}%` }}>
+                        <ChartBarValue $forecast={'isForecast' in bar && bar.isForecast}>
+                          {Math.round(bar.amount / 10000)}
+                          {'isForecast' in bar && bar.isForecast && <ForecastTag>예상</ForecastTag>}
+                        </ChartBarValue>
+                        <ChartBar $forecast={'isForecast' in bar && bar.isForecast} />
+                      </ChartBarBarWrap>
+                    </ChartBarTrack>
+                    <ChartBarLabel>{bar.label}</ChartBarLabel>
+                  </ChartBarColumn>
+                ))}
+              </ChartBars>
+            </ChartWrap>
+          </>
+        )}
       </Card>
 
       <SatisfactionButtonWrap>
@@ -221,6 +278,13 @@ const Card = styled.div`
   & + & {
     margin-top: 14px;
   }
+`;
+
+const CardError = styled.div`
+  font-size: 14px;
+  color: #999;
+  text-align: center;
+  padding: 20px 0;
 `;
 
 const CardTop = styled.div`
