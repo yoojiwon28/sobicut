@@ -4,6 +4,8 @@ import type {
   BptiReport,
   WalletTemperature,
   MonthlyForecast,
+  Scores,
+  BudgetStatus,
 } from '../types/report';
 
 export type DailyReportItem = {
@@ -38,4 +40,18 @@ export function getWalletTemperature() {
 // 이번 달 예상 지출 리포트
 export function getMonthlyForecast() {
   return apiFetch<MonthlyForecast>('/reports/monthly-forecast');
+}
+
+// 상단 종합 점수 (지갑 온도 / 충동 지수 / BPTI)
+export function getScores() {
+  return apiFetch<Scores>('/reports/scores');
+}
+
+// 예산 현황 (주간 / 월간) — year/month 미지정 시 이번 달
+export function getBudgetStatus(params?: { year?: number; month?: number }) {
+  const query = new URLSearchParams();
+  if (params?.year != null) query.set('year', String(params.year));
+  if (params?.month != null) query.set('month', String(params.month));
+  const qs = query.toString();
+  return apiFetch<BudgetStatus>(`/reports/budget-status${qs ? `?${qs}` : ''}`);
 }

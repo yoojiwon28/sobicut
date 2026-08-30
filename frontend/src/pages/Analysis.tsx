@@ -3,9 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import { PageWrap } from '../styles/auth.styles';
 import { useTransactions } from '../hooks/useTransactions';
+import { useScores, useBudgetStatus } from '../hooks/useReports';
 import type { Transaction } from '../types/transaction';
-import { DUMMY_BUDGET } from '../mocks/budget';
-import { getMonthKey, formatMonthLabel, addMonths, getWeekRange, toDateKey } from '../utils/date';
+import { getMonthKey, formatMonthLabel, addMonths } from '../utils/date';
 import { CATEGORY_COLORS } from '../utils/category';
 import editIcon from '../assets/images/edit_icon.svg';
 import angleRightIcon from '../assets/images/angle_right.svg';
@@ -13,14 +13,6 @@ import angleLeftIcon from '../assets/images/angle_left.svg';
 import impulseIcon from '../assets/images/impulse.svg';
 import cartIcon from '../assets/images/cart.svg';
 import { WALLET_GAUGE_COLORS, getWalletLevelIndex } from '../utils/wallet';
-
-// GET /reports/scores 더미데이터
-const DUMMY_SCORES = {
-  wallet_temperature: 72,
-  wallet_level: '임계',
-  impulse_score: 67,
-  bpti: 'FIRE',
-};
 
 function WalletIcon({ color }: { color: string }) {
   return (
@@ -69,6 +61,13 @@ function displayAmount(query: { isPending: boolean; isError: boolean }, amount: 
   return `${amount.toLocaleString()}원`;
 }
 
+// 상단 점수 카드: 로딩 중 '—', 에러 시 해당 카드에만 안내 문구
+function displayScore(query: { isPending: boolean; isError: boolean }, value: string) {
+  if (query.isError) return '불러오지 못했어요';
+  if (query.isPending) return '—';
+  return value;
+}
+
 function hexToRgb(hex: string) {
   const num = parseInt(hex.replace('#', ''), 16);
   return { r: (num >> 16) & 255, g: (num >> 8) & 255, b: num & 255 };
@@ -109,58 +108,37 @@ export default function Analysis() {
   const [budgetMonth, setBudgetMonth] = useState(() => new Date());
   const [spendMonth, setSpendMonth] = useState(() => new Date());
 
-  // 1) 주간 지출용 — 오늘 기준 연/월. 주 범위 필터는 아래에서 클라이언트로 유지
-  const weeklyExpenseQuery = useTransactions({
-    type: 'expense',
+  // 상단 3개 카드 (지갑 온도 / 충동 지수 / BPTI)
+  const scoresQuery = useScores();
+  const scores = scoresQuery.data;
+
+  // 예산 현황 — 주간 블록은 오늘 기준, 월간 블록은 budgetMonth 기준
+  // (budgetMonth가 이번 달이면 queryKey 동일 → 캐시 공유)
+  const weeklyBudgetQuery = useBudgetStatus({
     year: TODAY.getFullYear(),
     month: TODAY.getMonth() + 1,
   });
-  // 2) 예산용 월 지출 — budgetMonth 기준
-  const budgetMonthQuery = useTransactions({
+  const monthlyBudgetQuery = useBudgetStatus({
     year: budgetMonth.getFullYear(),
     month: budgetMonth.getMonth() + 1,
-    type: 'expense',
   });
-  // 3) 소비 분석용 월 지출 — spendMonth 기준 (budgetMonth와 같은 달이면 queryKey 동일 → 캐시 공유)
+
+  // 소비 분석용 월 지출 — spendMonth 기준 (카테고리 도넛 / 히트맵)
   const spendMonthQuery = useTransactions({
     year: spendMonth.getFullYear(),
     month: spendMonth.getMonth() + 1,
     type: 'expense',
   });
 
-  const weeklyTransactions = weeklyExpenseQuery.data ?? EMPTY_TRANSACTIONS;
-  const budgetMonthTransactions = budgetMonthQuery.data ?? EMPTY_TRANSACTIONS;
   const spendMonthTransactions = spendMonthQuery.data ?? EMPTY_TRANSACTIONS;
 
-  const walletLevelIndex = getWalletLevelIndex(DUMMY_SCORES.wallet_level);
+  const walletLevelIndex = getWalletLevelIndex(scores?.wallet_temperature.level ?? '');
 
-  const { start: weekStart, end: weekEnd } = getWeekRange(TODAY);
+  const weekly = weeklyBudgetQuery.data?.weekly;
+  const monthly = monthlyBudgetQuery.data?.monthly;
 
-  const weeklySpent = useMemo(() => {
-    const startKey = toDateKey(weekStart);
-    const endKey = toDateKey(weekEnd);
-    return sumExpense(
-      weeklyTransactions.filter(
-        (tx) => tx.type === 'expense' && tx.transaction_date >= startKey && tx.transaction_date <= endKey,
-      ),
-    );
-  }, [weekStart, weekEnd, weeklyTransactions]);
-
-  const budgetMonthKey = getMonthKey(budgetMonth);
-  const monthlySpent = useMemo(
-    () =>
-      sumExpense(
-        budgetMonthTransactions.filter(
-          (tx) => tx.type === 'expense' && tx.transaction_date.startsWith(budgetMonthKey),
-        ),
-      ),
-    [budgetMonthKey, budgetMonthTransactions],
-  );
-
-  const weeklyPercent = DUMMY_BUDGET.thisWeek > 0 ? Math.min(100, Math.round((weeklySpent / DUMMY_BUDGET.thisWeek) * 100)) : 0;
-  const monthlyPercent = DUMMY_BUDGET.total > 0 ? Math.min(100, Math.round((monthlySpent / DUMMY_BUDGET.total) * 100)) : 0;
-  const weeklyRemain = DUMMY_BUDGET.thisWeek - weeklySpent;
-  const monthlyRemain = DUMMY_BUDGET.total - monthlySpent;
+  const weeklyPercent = weekly && weekly.budget > 0 ? Math.min(100, Math.round(weekly.usage_rate)) : 0;
+  const monthlyPercent = monthly && monthly.budget > 0 ? Math.min(100, Math.round(monthly.usage_rate)) : 0;
 
   const spendMonthKey = getMonthKey(spendMonth);
   const monthExpenses = useMemo(
@@ -264,17 +242,19 @@ export default function Analysis() {
           <IconWrap>
             <WalletIcon color={WALLET_GAUGE_COLORS[walletLevelIndex]} />
           </IconWrap>
-          <StatValue $color={WALLET_GAUGE_COLORS[walletLevelIndex]}>{DUMMY_SCORES.wallet_temperature}°C</StatValue>
+          <StatValue $color={WALLET_GAUGE_COLORS[walletLevelIndex]}>
+            {displayScore(scoresQuery, `${scores?.wallet_temperature.my_temp ?? ''}°C`)}
+          </StatValue>
         </StatCard>
         <StatCard>
           <StatLabel>충동 지수</StatLabel>
           <StatIcon src={impulseIcon} alt="" width={19} height={26} />
-          <StatValue $color="#6A5CE6">{DUMMY_SCORES.impulse_score}점</StatValue>
+          <StatValue $color="#6A5CE6">{displayScore(scoresQuery, `${scores?.impulse_score ?? ''}점`)}</StatValue>
         </StatCard>
         <StatCard>
           <StatLabel>BPTI</StatLabel>
           <StatIcon src={cartIcon} alt="" width={26} height={26} />
-          <StatValue $color="#FF4040">{DUMMY_SCORES.bpti}</StatValue>
+          <StatValue $color="#FF4040">{displayScore(scoresQuery, scores?.bpti.type ?? '')}</StatValue>
         </StatCard>
       </StatRow>
 
@@ -295,20 +275,20 @@ export default function Analysis() {
           <BudgetRow>
             <BudgetColumn>
               <BudgetColLabel>지출</BudgetColLabel>
-              <BudgetColValue>{displayAmount(weeklyExpenseQuery, weeklySpent)}</BudgetColValue>
+              <BudgetColValue>{displayAmount(weeklyBudgetQuery, weekly?.spent ?? 0)}</BudgetColValue>
             </BudgetColumn>
             <BudgetColumn $align="right">
               <BudgetColLabel>예산</BudgetColLabel>
-              <BudgetColValue>{DUMMY_BUDGET.thisWeek.toLocaleString()}원</BudgetColValue>
+              <BudgetColValue>{displayAmount(weeklyBudgetQuery, weekly?.budget ?? 0)}</BudgetColValue>
             </BudgetColumn>
           </BudgetRow>
           <BudgetProgressBar percent={weeklyPercent} />
           <BudgetRemainText>
-            {weeklyExpenseQuery.isError
+            {weeklyBudgetQuery.isError
               ? '불러오지 못했어요'
-              : weeklyExpenseQuery.isPending
+              : weeklyBudgetQuery.isPending
                 ? '—'
-                : remainText(weeklyRemain)}
+                : remainText(weekly?.remaining ?? 0)}
           </BudgetRemainText>
         </BudgetBlock>
 
@@ -326,20 +306,20 @@ export default function Analysis() {
           <BudgetRow>
             <BudgetColumn>
               <BudgetColLabel>지출</BudgetColLabel>
-              <BudgetColValue>{displayAmount(budgetMonthQuery, monthlySpent)}</BudgetColValue>
+              <BudgetColValue>{displayAmount(monthlyBudgetQuery, monthly?.spent ?? 0)}</BudgetColValue>
             </BudgetColumn>
             <BudgetColumn $align="right">
               <BudgetColLabel>예산</BudgetColLabel>
-              <BudgetColValue>{DUMMY_BUDGET.total.toLocaleString()}원</BudgetColValue>
+              <BudgetColValue>{displayAmount(monthlyBudgetQuery, monthly?.budget ?? 0)}</BudgetColValue>
             </BudgetColumn>
           </BudgetRow>
           <BudgetProgressBar percent={monthlyPercent} />
           <BudgetRemainText>
-            {budgetMonthQuery.isError
+            {monthlyBudgetQuery.isError
               ? '불러오지 못했어요'
-              : budgetMonthQuery.isPending
+              : monthlyBudgetQuery.isPending
                 ? '—'
-                : remainText(monthlyRemain)}
+                : remainText(monthly?.remaining ?? 0)}
           </BudgetRemainText>
         </BudgetBlock>
 
