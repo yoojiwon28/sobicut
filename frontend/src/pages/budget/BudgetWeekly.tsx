@@ -67,6 +67,7 @@ export default function BudgetWeekly() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: BUDGET_QUERY_KEY });
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['reports'] });
       navigate('/budget');
     },
   });
