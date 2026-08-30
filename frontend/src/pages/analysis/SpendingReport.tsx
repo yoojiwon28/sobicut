@@ -71,8 +71,14 @@ export default function SpendingReport() {
   const lastMonthLabel = lastMonth?.label ?? '—';
   const lastMonthAmount = lastMonth?.amount ?? 0;
   const chartBars = [...forecastHistory, { label: '이번 달', amount: predictedTotal, isForecast: true }];
-  const chartMax = Math.max(0, ...chartBars.map((b) => b.amount));
-  const budgetLinePercent = chartMax > 0 ? (budgetLine / chartMax) * 100 : 0;
+  // 막대 높이는 '지출' 기준으로만 스케일한다. 예산을 최대값에 섞으면(Math.max(maxSpending, budgetLine))
+  // 예산 미달인 달에는 막대가 예산 대비 비율로 쪼그라들고 예산선은 항상 100%(천장)에 붙어버린다.
+  const maxSpending = Math.max(0, ...chartBars.map((b) => b.amount));
+  // 예산선 위치는 '지출 최대값' 대비 비율. 예산이 더 크면 clamp 로 차트 상단(100%)에 고정된다.
+  const showBudgetLine = budgetLine > 0 && maxSpending > 0;
+  const budgetLinePercent = showBudgetLine
+    ? Math.min(Math.max((budgetLine / maxSpending) * 100, 0), 100)
+    : 0;
 
   return (
     <PageWrap>
@@ -220,14 +226,16 @@ export default function SpendingReport() {
             {forecastOverBudget && <WarningText>예산 초과 예상: 과소비에 주의하세요!</WarningText>}
 
             <ChartWrap>
-              <BudgetLine style={{ bottom: `${LABEL_H + (TRACK_H * budgetLinePercent) / 100}px` }}>
-                <BudgetLineScissors>✂</BudgetLineScissors>
-              </BudgetLine>
+              {showBudgetLine && (
+                <BudgetLine style={{ bottom: `${LABEL_H + (TRACK_H * budgetLinePercent) / 100}px` }}>
+                  <BudgetLineScissors>✂</BudgetLineScissors>
+                </BudgetLine>
+              )}
               <ChartBars>
                 {chartBars.map((bar) => (
                   <ChartBarColumn key={bar.label}>
                     <ChartBarTrack>
-                      <ChartBarBarWrap style={{ height: `${chartMax > 0 ? (bar.amount / chartMax) * 100 : 0}%` }}>
+                      <ChartBarBarWrap style={{ height: `${maxSpending > 0 ? (bar.amount / maxSpending) * 100 : 0}%` }}>
                         <ChartBarValue $forecast={'isForecast' in bar && bar.isForecast}>
                           {Math.round(bar.amount / 10000)}
                           {'isForecast' in bar && bar.isForecast && <ForecastTag>예상</ForecastTag>}
