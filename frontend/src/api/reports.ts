@@ -6,6 +6,8 @@ import type {
   MonthlyForecast,
   Scores,
   BudgetStatus,
+  CategoryReport,
+  HeatmapReport,
 } from '../types/report';
 
 export type DailyReportItem = {
@@ -54,4 +56,22 @@ export function getBudgetStatus(params?: { year?: number; month?: number }) {
   if (params?.month != null) query.set('month', String(params.month));
   const qs = query.toString();
   return apiFetch<BudgetStatus>(`/reports/budget-status${qs ? `?${qs}` : ''}`);
+}
+
+// 소비 카테고리 집계 — year/month 미지정 시 이번 달
+export function getCategoryReport(params?: { year?: number; month?: number }) {
+  const query = new URLSearchParams();
+  if (params?.year != null) query.set('year', String(params.year));
+  if (params?.month != null) query.set('month', String(params.month));
+  const qs = query.toString();
+  return apiFetch<CategoryReport>(`/reports/category${qs ? `?${qs}` : ''}`);
+}
+
+// 요일 × 시간대 소비 히트맵 — year/month 미지정 시 이번 달
+export function getHeatmapReport(params?: { year?: number; month?: number }) {
+  const query = new URLSearchParams();
+  if (params?.year != null) query.set('year', String(params.year));
+  if (params?.month != null) query.set('month', String(params.month));
+  const qs = query.toString();
+  return apiFetch<HeatmapReport>(`/reports/heatmap${qs ? `?${qs}` : ''}`);
 }
