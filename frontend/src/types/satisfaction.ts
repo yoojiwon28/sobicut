@@ -14,3 +14,13 @@ export type SatisfactionCreatePayload = {
   day_type: string; // '7일' | '30일'
   score: number;
 };
+
+// GET /satisfactions 응답 — 거래 1건당 여러 회차 응답이 묶여서 온다.
+// satisfactions 배열에는 한 회차만 있을 수 있고, day_type 은 '1일' | '7일' | '30일'.
+export type SatisfactionRecordItem = {
+  transaction_id: number;
+  merchant: string;
+  amount: number;
+  transaction_date: string; // 'YYYY-MM-DD'
+  satisfactions: { day_type: string; score: number; submitted_at: string }[];
+};

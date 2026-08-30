@@ -2,13 +2,21 @@ import { useMemo, useState } from 'react';
 import styled from 'styled-components';
 import BackButton from '../../components/BackButton';
 import { PageWrap } from '../../styles/auth.styles';
-import { DUMMY_SATISFACTION_RECORDS, DUMMY_WEEKLY_SATISFACTION } from '../../mocks/satisfaction';
+import { useSatisfactions } from '../../hooks/useSatisfactions';
+import type { SatisfactionRecordItem } from '../../types/satisfaction';
 import { CATEGORY_ICONS } from '../../utils/category';
-import { addMonths, formatMonthLabel, getMonthKey } from '../../utils/date';
+import { addMonths, formatMonthLabel, getWeekRange } from '../../utils/date';
 import angleLeftIcon from '../../assets/images/angle_left.svg';
 import angleRightIcon from '../../assets/images/angle_right.svg';
 
 const CHART_H = 170;
+const MISSING_SCORE_COLOR = '#BBB';
+const WEEK_LABELS = ['첫째', '둘째', '셋째', '넷째', '다섯째', '여섯째'];
+const MS_PER_WEEK = 7 * 24 * 60 * 60 * 1000;
+
+function weekLabel(index: number) {
+  return `${WEEK_LABELS[index] ?? `${index + 1}째`} 주`;
+}
 
 function formatMonthDayKorean(dateStr: string) {
   const d = new Date(dateStr);
@@ -25,14 +33,47 @@ function scoreColor(score: number) {
 export default function SatisfactionResult() {
   const [month, setMonth] = useState(() => new Date());
 
-  const monthKey = getMonthKey(month);
+  const { data, isPending, isError } = useSatisfactions({
+    year: month.getFullYear(),
+    month: month.getMonth() + 1,
+  });
+
+  // 서버가 이미 월(응답 제출 시각 기준) 필터를 적용하므로 클라이언트 필터는 하지 않는다.
   const records = useMemo(
     () =>
-      DUMMY_SATISFACTION_RECORDS.filter((r) => r.date.startsWith(monthKey)).sort((a, b) =>
-        b.date.localeCompare(a.date),
-      ),
-    [monthKey],
+      [...(data ?? [])].sort((a, b) => b.transaction_date.localeCompare(a.transaction_date)),
+    [data],
   );
+
+  // 서버가 주차별 평균을 주지 않아 프론트에서 집계한다.
+  // 선택된 달의 1일이 속한 주를 '첫째 주'로 잡고, 응답 제출 시각(submitted_at)으로 주차를 판정한다.
+  const weekly = useMemo(() => {
+    if (records.length === 0) return [];
+    const firstOfMonth = new Date(month.getFullYear(), month.getMonth(), 1);
+    const lastOfMonth = new Date(month.getFullYear(), month.getMonth() + 1, 0);
+    const firstMonday = getWeekRange(firstOfMonth).start;
+    const lastMonday = getWeekRange(lastOfMonth).start;
+    const weekCount =
+      Math.round((lastMonday.getTime() - firstMonday.getTime()) / MS_PER_WEEK) + 1;
+
+    const sums = new Array<number>(weekCount).fill(0);
+    const counts = new Array<number>(weekCount).fill(0);
+    for (const rec of records) {
+      for (const s of rec.satisfactions) {
+        const submittedMonday = getWeekRange(new Date(s.submitted_at)).start;
+        const idx = Math.round(
+          (submittedMonday.getTime() - firstMonday.getTime()) / MS_PER_WEEK,
+        );
+        if (idx < 0 || idx >= weekCount) continue;
+        sums[idx] += s.score;
+        counts[idx] += 1;
+      }
+    }
+    return sums.map((sum, i) => ({
+      week: weekLabel(i),
+      average: counts[i] > 0 ? sum / counts[i] : 0,
+    }));
+  }, [records, month]);
 
   return (
     <PageWrap>
@@ -53,36 +94,58 @@ export default function SatisfactionResult() {
         <MonthDivider />
 
         <ResultBody>
-          {records.length === 0 ? (
+          {isPending ? (
+            <EmptyText>—</EmptyText>
+          ) : isError ? (
+            <EmptyText>불러오지 못했어요</EmptyText>
+          ) : records.length === 0 ? (
             <EmptyText>이번 달 만족도 기록이 없어요</EmptyText>
           ) : (
             <List>
-              {records.map((r) => (
-                <Card key={r.id}>
-                <CardTop>
-                  <MerchantInfo>
-                    <CategoryIcon src={CATEGORY_ICONS[r.category]} alt="" width={26} height={26} />
-                    <MerchantName>{r.merchant}</MerchantName>
-                  </MerchantInfo>
-                  <AmountInfo>
-                    <CardAmount>{r.amount.toLocaleString()} 원</CardAmount>
-                    <CardDate>{formatMonthDayKorean(r.date)}</CardDate>
-                  </AmountInfo>
-                </CardTop>
+              {records.map((r) => {
+                const s7 = r.satisfactions.find((s) => s.day_type === '7일');
+                const s30 = r.satisfactions.find((s) => s.day_type === '30일');
+                // 서버 응답에 category 필드가 아직 없어 아이콘 자리만 유지한다.
+                // 백엔드에 category 추가 시 아래 캐스팅을 제거하고 값만 연결하면 된다.
+                const category = (r as SatisfactionRecordItem & { category?: string }).category;
+                const categoryIcon = category ? CATEGORY_ICONS[category] : undefined;
+                return (
+                  <Card key={r.transaction_id}>
+                    <CardTop>
+                      <MerchantInfo>
+                        {categoryIcon ? (
+                          <CategoryIcon src={categoryIcon} alt="" width={26} height={26} />
+                        ) : (
+                          <CategoryIconSlot aria-hidden />
+                        )}
+                        <MerchantName>{r.merchant}</MerchantName>
+                      </MerchantInfo>
+                      <AmountInfo>
+                        <CardAmount>{r.amount.toLocaleString()} 원</CardAmount>
+                        <CardDate>{formatMonthDayKorean(r.transaction_date)}</CardDate>
+                      </AmountInfo>
+                    </CardTop>
 
-                <ScoreSection>
-                  <Pill style={{ gridColumn: 1, gridRow: 1 }}>7일 후</Pill>
-                  <Pill style={{ gridColumn: 3, gridRow: 1 }}>30일 후</Pill>
-                  <ScoreValue style={{ gridColumn: 1, gridRow: 2 }} $color={scoreColor(r.score7)}>
-                    {r.score7} / 5점
-                  </ScoreValue>
-                  <ArrowIcon style={{ gridColumn: 2, gridRow: 2 }}>▶</ArrowIcon>
-                  <ScoreValue style={{ gridColumn: 3, gridRow: 2 }} $color={scoreColor(r.score30)}>
-                    {r.score30} / 5점
-                  </ScoreValue>
-                </ScoreSection>
-              </Card>
-              ))}
+                    <ScoreSection>
+                      <Pill style={{ gridColumn: 1, gridRow: 1 }}>7일 후</Pill>
+                      <Pill style={{ gridColumn: 3, gridRow: 1 }}>30일 후</Pill>
+                      <ScoreValue
+                        style={{ gridColumn: 1, gridRow: 2 }}
+                        $color={s7 ? scoreColor(s7.score) : MISSING_SCORE_COLOR}
+                      >
+                        {s7 ? `${s7.score} / 5점` : '—'}
+                      </ScoreValue>
+                      <ArrowIcon style={{ gridColumn: 2, gridRow: 2 }}>▶</ArrowIcon>
+                      <ScoreValue
+                        style={{ gridColumn: 3, gridRow: 2 }}
+                        $color={s30 ? scoreColor(s30.score) : MISSING_SCORE_COLOR}
+                      >
+                        {s30 ? `${s30.score} / 5점` : '—'}
+                      </ScoreValue>
+                    </ScoreSection>
+                  </Card>
+                );
+              })}
             </List>
           )}
 
@@ -98,7 +161,7 @@ export default function SatisfactionResult() {
           <ChartArea>
             <Baseline />
             <Bars>
-              {DUMMY_WEEKLY_SATISFACTION.map((w) => (
+              {weekly.map((w) => (
                 <BarColumn key={w.week}>
                   <BarTrack>
                     <Bar
@@ -189,6 +252,13 @@ const MerchantInfo = styled.div`
 
 const CategoryIcon = styled.img`
   filter: grayscale(1) opacity(0.85);
+`;
+
+const CategoryIconSlot = styled.span`
+  display: inline-block;
+  width: 26px;
+  height: 26px;
+  flex-shrink: 0;
 `;
 
 const MerchantName = styled.div`
