@@ -1,12 +1,14 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import Modal from './Modal';
 import DateTimePickerField from './DateTimePickerField';
 import TagQuestions, { TAG_LABEL, PLAN_TAG_NAMES, CONTEXT_TAG_NAMES } from './TagQuestions';
-import { CATEGORY_OPTIONS } from '../utils/category';
-import { classifyCategory } from '../utils/classifyCategory';
-import { parseSpendingText } from '../utils/parseSpendingText';
+import { Spinner } from '../styles/auth.styles';
+import { CATEGORY_NAMES } from '../constants/categories';
+import { useCreateExpense, useParseCardMessage } from '../hooks/useTransactions';
+import { useEmotions } from '../hooks/useEmotions';
+import { ApiError } from '../api/client';
 import { formatSlashDateTime } from '../utils/date';
 import angleRightIcon from '../assets/images/angle_right.svg';
 
@@ -23,36 +25,131 @@ const MOCK_PATTERN: { planning: Record<string, number>; context: Record<string, 
 
 type Step = 'confirm' | 'edit' | 'emotion' | 'result';
 
+const pad2 = (n: number) => String(n).padStart(2, '0');
+const todayDate = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+};
+const nowTime = () => {
+  const d = new Date();
+  return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+};
+
 type ExpenseCaptureModalProps = {
-  rawText: string;
+  // 감지된 결제 문자 원문. 클립보드를 읽을 수 없을 때의 폴백으로만 쓴다.
+  rawText?: string;
   onClose: () => void;
 };
 
 export default function ExpenseCaptureModal({ rawText, onClose }: ExpenseCaptureModalProps) {
   const navigate = useNavigate();
-  const parsed = useMemo(() => parseSpendingText(rawText), [rawText]);
-  const suggestedCategory = useMemo(
-    () => (parsed.merchant ? classifyCategory(parsed.merchant) : CATEGORY_OPTIONS[0]),
-    [parsed.merchant],
+
+  const parseMutation = useParseCardMessage();
+  const createMutation = useCreateExpense();
+  const { data: emotions = [] } = useEmotions();
+  const emotionIdByName = useMemo(
+    () => Object.fromEntries(emotions.map((tag) => [tag.name, tag.id])),
+    [emotions],
   );
 
   const [step, setStep] = useState<Step>('confirm');
-  const [amount, setAmount] = useState(String(parsed.amount ?? ''));
-  const [merchant, setMerchant] = useState(parsed.merchant ?? '');
-  const [date, setDate] = useState(parsed.date ?? '');
-  const [time, setTime] = useState(parsed.time ?? '');
-  const [category, setCategory] = useState(suggestedCategory);
+  const [amount, setAmount] = useState('');
+  const [merchant, setMerchant] = useState('');
+  const [date, setDate] = useState(todayDate);
+  const [time, setTime] = useState(nowTime);
+  const [category, setCategory] = useState('');
+  const [cardCompany, setCardCompany] = useState(''); // 화면 표시 전용. payload 에 넣지 않는다.
+  const [parseError, setParseError] = useState('');
+  const [submitError, setSubmitError] = useState('');
   const [planTag, setPlanTag] = useState<string | null>(null);
   const [contextTags, setContextTags] = useState<string[]>([]);
+
+  // 모달이 열릴 때 클립보드 문자를 읽어 파싱한다. 최초 1회만.
+  useEffect(() => {
+    let cancelled = false;
+
+    const run = async () => {
+      let text = '';
+      try {
+        text = await navigator.clipboard.readText();
+      } catch {
+        // 클립보드 권한 거부/미지원 → 폴백 원문 사용, 그래도 없으면 빈 폼으로 연다.
+        text = rawText ?? '';
+      }
+      if (!text.trim()) text = rawText ?? '';
+
+      const messageText = text.trim();
+      if (cancelled) return;
+      if (!messageText) {
+        setStep('edit');
+        return;
+      }
+
+      parseMutation.mutate(messageText, {
+        onSuccess: (data) => {
+          if (cancelled) return;
+          setAmount(String(data.amount));
+          setMerchant(data.merchant);
+          setDate(data.transaction_date); // 이미 'YYYY-MM-DD' → 변환하지 않는다.
+          setTime(data.transaction_time); // 'HH:mm'
+          setCardCompany(data.card_company);
+          if (data.category) setCategory(data.category); // null 이면 사용자가 직접 선택
+        },
+        onError: (err) => {
+          if (cancelled) return;
+          // 파싱 실패(400): 자동 채우기 없이 빈 폼으로 두고 직접 입력하게 한다.
+          setParseError(
+            err instanceof ApiError ? err.message : '문자를 인식하지 못했어요. 직접 입력해주세요.',
+          );
+          setStep('edit');
+        },
+      });
+    };
+
+    run();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const isParsing = parseMutation.isPending;
+  const hasParsedData = parseMutation.isSuccess;
+  const categoryMissing = category.trim().length === 0;
 
   const toggleContextTag = (tag: string) => {
     setContextTags((prev) => (prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]));
   };
 
   const record = () => {
-    // TODO: 실제 API 연동
-    console.log({ planTag, contextTags });
-    setStep('result');
+    if (categoryMissing || createMutation.isPending) return;
+    setSubmitError('');
+
+    const tagNames = [planTag, ...contextTags].filter((name): name is string => name !== null);
+    const emotionTagIds = tagNames
+      .map((name) => emotionIdByName[name])
+      .filter((id): id is number => id !== undefined);
+
+    createMutation.mutate(
+      {
+        payload: {
+          amount: Number(amount),
+          type: 'expense',
+          category,
+          merchant: merchant.trim() || undefined,
+          transaction_date: date, // parse 응답이 이미 'YYYY-MM-DD'
+          transaction_time: time, // 'HH:mm' → createTransaction 이 ':00' 을 붙여 전송
+        },
+        emotionTagIds,
+      },
+      {
+        onSuccess: () => setStep('result'),
+        onError: (err) =>
+          setSubmitError(
+            err instanceof ApiError ? err.message : '기록에 실패했어요. 다시 시도해주세요.',
+          ),
+      },
+    );
   };
 
   if (step === 'result') {
@@ -127,8 +224,18 @@ export default function ExpenseCaptureModal({ rawText, onClose }: ExpenseCapture
             onToggleContextTag={toggleContextTag}
           />
 
-          <RecordButton type="button" disabled={planTag === null} onClick={record}>
-            기록 완료
+          {submitError && <FeedbackText>{submitError}</FeedbackText>}
+
+          <RecordButton
+            type="button"
+            disabled={planTag === null || createMutation.isPending}
+            onClick={record}
+          >
+            {createMutation.isPending ? (
+              <Spinner $size={14} $color="#fff" $trackColor="rgba(255,255,255,0.4)" />
+            ) : (
+              '기록 완료'
+            )}
           </RecordButton>
           <SkipButton type="button" onClick={onClose}>
             나중에 태그할게요
@@ -145,6 +252,8 @@ export default function ExpenseCaptureModal({ rawText, onClose }: ExpenseCapture
       <Modal>
         <Title>새로운 결제 포착!</Title>
         <Divider />
+
+        {parseError && <FeedbackText>{parseError}</FeedbackText>}
 
         <InlineFieldList>
           <InlineField>
@@ -181,7 +290,10 @@ export default function ExpenseCaptureModal({ rawText, onClose }: ExpenseCapture
           <CategoryLabel>카테고리</CategoryLabel>
           <SelectFieldWrap>
             <CategorySelect value={category} onChange={(e) => setCategory(e.target.value)}>
-              {CATEGORY_OPTIONS.map((option) => (
+              <option value="" disabled>
+                카테고리를 선택해주세요
+              </option>
+              {CATEGORY_NAMES.map((option) => (
                 <option key={option} value={option}>
                   {option}
                 </option>
@@ -189,13 +301,21 @@ export default function ExpenseCaptureModal({ rawText, onClose }: ExpenseCapture
             </CategorySelect>
             <ChevronIcon src={angleRightIcon} alt="" width={16} height={16} />
           </SelectFieldWrap>
+          {categoryMissing && <FeedbackText>카테고리를 선택해주세요</FeedbackText>}
         </CategoryField>
 
         <ButtonRow>
-          <OutlineButton type="button" onClick={() => setStep('confirm')}>
+          <OutlineButton
+            type="button"
+            onClick={() => (hasParsedData ? setStep('confirm') : onClose())}
+          >
             취소
           </OutlineButton>
-          <PrimaryButton type="button" onClick={() => setStep('emotion')}>
+          <PrimaryButton
+            type="button"
+            disabled={categoryMissing}
+            onClick={() => setStep('emotion')}
+          >
             수정 완료
           </PrimaryButton>
         </ButtonRow>
@@ -210,33 +330,50 @@ export default function ExpenseCaptureModal({ rawText, onClose }: ExpenseCapture
       <Title>새로운 결제 포착!</Title>
       <Divider />
 
-      <Amount>{Number(amount || 0).toLocaleString()}원</Amount>
+      {isParsing ? (
+        <LoadingWrap>
+          <Spinner $size={22} />
+          <LoadingText>결제 문자를 분석하고 있어요…</LoadingText>
+        </LoadingWrap>
+      ) : (
+        <>
+          <Amount>{Number(amount || 0).toLocaleString()}원</Amount>
 
-      <InfoRow>
-        <InfoLabel>가맹점</InfoLabel>
-        <InfoValue>{merchant || '-'}</InfoValue>
-      </InfoRow>
-      <InfoRow>
-        <InfoLabel>날짜</InfoLabel>
-        <InfoValue>{date && time ? formatSlashDateTime(date, time) : '-'}</InfoValue>
-      </InfoRow>
-      <InfoRow>
-        <InfoLabel>카드</InfoLabel>
-        <InfoValue>{parsed.card || '-'}</InfoValue>
-      </InfoRow>
+          <InfoRow>
+            <InfoLabel>가맹점</InfoLabel>
+            <InfoValue>{merchant || '-'}</InfoValue>
+          </InfoRow>
+          <InfoRow>
+            <InfoLabel>날짜</InfoLabel>
+            <InfoValue>{date && time ? formatSlashDateTime(date, time) : '-'}</InfoValue>
+          </InfoRow>
+          <InfoRow>
+            <InfoLabel>카드</InfoLabel>
+            <InfoValue>{cardCompany || '-'}</InfoValue>
+          </InfoRow>
 
-      <CategoryBadgeWrap>
-        <CategoryBadge>{category}로 자동 분류</CategoryBadge>
-      </CategoryBadgeWrap>
+          <CategoryBadgeWrap>
+            {categoryMissing ? (
+              <FeedbackText>카테고리를 선택해주세요</FeedbackText>
+            ) : (
+              <CategoryBadge>{category}로 자동 분류</CategoryBadge>
+            )}
+          </CategoryBadgeWrap>
 
-      <ButtonRow>
-        <OutlineButton type="button" onClick={() => setStep('edit')}>
-          수정하기
-        </OutlineButton>
-        <PrimaryButton type="button" onClick={() => setStep('emotion')}>
-          맞아요
-        </PrimaryButton>
-      </ButtonRow>
+          <ButtonRow>
+            <OutlineButton type="button" onClick={() => setStep('edit')}>
+              수정하기
+            </OutlineButton>
+            <PrimaryButton
+              type="button"
+              disabled={categoryMissing}
+              onClick={() => setStep('emotion')}
+            >
+              맞아요
+            </PrimaryButton>
+          </ButtonRow>
+        </>
+      )}
 
       <StepProgress step={1} />
     </Modal>
@@ -301,6 +438,29 @@ const Divider = styled.hr`
   border: none;
   border-top: 1px solid #eee;
   margin: 0 0 18px;
+`;
+
+// 파싱/저장 실패 및 카테고리 미선택 안내. AddExpense 의 ErrorText 와 동일한 톤.
+const FeedbackText = styled.p`
+  color: #e74c3c;
+  font-size: 12px;
+  font-weight: 600;
+  text-align: center;
+  margin: 8px 0 12px;
+`;
+
+const LoadingWrap = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 28px 0;
+`;
+
+const LoadingText = styled.p`
+  font-size: 13px;
+  color: #888;
+  margin: 0;
 `;
 
 const Amount = styled.div`

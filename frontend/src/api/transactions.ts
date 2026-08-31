@@ -1,5 +1,5 @@
 import { apiFetch } from './client';
-import type { Transaction, TransactionListParams } from '../types/transaction';
+import type { ParseResult, Transaction, TransactionListParams } from '../types/transaction';
 
 export function getTransactions(params: TransactionListParams = {}) {
   const query = new URLSearchParams();
@@ -17,16 +17,9 @@ export function getTransaction(id: number) {
   return apiFetch<Transaction>(`/transactions/${id}`);
 }
 
-export type ParsedCardMessage = {
-  amount: number;
-  merchant: string;
-  transaction_date: string;
-  transaction_time: string;
-  card_company: string;
-};
-
+// POST /transactions/parse — 실패 시 400 + { detail } → ApiError 로 던져진다.
 export function parseCardMessage(messageText: string) {
-  return apiFetch<ParsedCardMessage>('/transactions/parse', {
+  return apiFetch<ParseResult>('/transactions/parse', {
     method: 'POST',
     body: JSON.stringify({ message_text: messageText }),
   });
