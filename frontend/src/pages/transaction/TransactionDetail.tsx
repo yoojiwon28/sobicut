@@ -10,7 +10,8 @@ import { AuthTitle } from '../../styles/auth.styles';
 import { FieldGroup, FieldLabel, OutlinedInput, OutlinedSelect, OutlinedTextarea } from '../../styles/field.styles';
 import { useTransaction } from '../../hooks/useTransactions';
 import { useEmotions } from '../../hooks/useEmotions';
-import { updateTransaction, tagTransactionEmotions, type TransactionUpdateBody } from '../../api/transactions';
+import Modal from '../../components/Modal';
+import { updateTransaction, deleteTransaction, tagTransactionEmotions, type TransactionUpdateBody } from '../../api/transactions';
 import { ApiError } from '../../api/client';
 import { toDateKey } from '../../utils/date';
 import { CATEGORY_ICONS, CATEGORY_OPTIONS } from '../../utils/category';
@@ -18,6 +19,7 @@ import incomeIcon from '../../assets/images/income_icon.svg';
 import expenseIcon from '../../assets/images/expense_icon.svg';
 import angleRightIcon from '../../assets/images/angle_right.svg';
 import editIcon from '../../assets/images/edit_icon.svg';
+
 
 // Q1 버튼 전용 카피(질문-답변 프레이밍). 태그 표현과 무관한 UI 문구라 TAG_LABEL과 분리한다.
 const PLAN_OPTION_COPY: Record<string, string> = {
@@ -87,6 +89,16 @@ export default function TransactionDetail() {
     mutationFn: (body: TransactionUpdateBody) => updateTransaction(numericId, body),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
+    },
+  });
+
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+  const deleteMutation = useMutation({
+    mutationFn: () => deleteTransaction(numericId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      navigate(backTo);
     },
   });
 
@@ -268,6 +280,9 @@ export default function TransactionDetail() {
               : '저장에 실패했어요. 다시 시도해주세요.'}
         </EmptyText>
       )}
+      <DeleteButton type="button" onClick={() => setShowDeleteConfirm(true)}>
+        이 내역 삭제하기
+      </DeleteButton>
 
       {tagSheetOpen && (
         <TagEditSheet
@@ -280,6 +295,29 @@ export default function TransactionDetail() {
             setTagSheetOpen(false);
           }}
         />
+      )}
+      {showDeleteConfirm && (
+        <Modal onClose={() => setShowDeleteConfirm(false)}>
+          <DeleteTitle>이 내역을 삭제할까요?</DeleteTitle>
+          <DeleteWarning>
+            삭제하면 되돌릴 수 없어요.
+            <br />
+            연결된 소비 태그도 함께 삭제돼요.
+          </DeleteWarning>
+          <DeleteButtonRow>
+            <DeleteCancelButton type="button" onClick={() => setShowDeleteConfirm(false)}>
+              취소
+            </DeleteCancelButton>
+            <DeleteConfirmButton
+              type="button"
+              disabled={deleteMutation.isPending}
+              onClick={() => deleteMutation.mutate()}
+            >
+              삭제하기
+            </DeleteConfirmButton>
+          </DeleteButtonRow>
+          {deleteMutation.isError && <ErrorTextInModal>삭제에 실패했어요. 다시 시도해주세요.</ErrorTextInModal>}
+        </Modal>
       )}
     </Page>
   );
@@ -561,4 +599,74 @@ const SubmitButton = styled.button`
     color: #999;
     cursor: not-allowed;
   }
+`;
+
+const DeleteButton = styled.button`
+  display: block;
+  width: 100%;
+  margin-top: 14px;
+  background: none;
+  border: none;
+  text-decoration: underline;
+  color: #6A5CE6;
+  font-size: 13px;
+  text-align: center;
+  cursor: pointer;
+`;
+
+const DeleteTitle = styled.h2`
+  font-size: 19px;
+  font-weight: 800;
+  text-align: center;
+  margin: 4px 0 10px;
+`;
+
+const DeleteWarning = styled.p`
+  font-size: 13px;
+  font-weight: 500;
+  color: #888;
+  line-height: 1.5;
+  text-align: center;
+  margin: 0 0 24px;
+`;
+
+const DeleteButtonRow = styled.div`
+  display: flex;
+  gap: 8px;
+`;
+
+const DeleteCancelButton = styled.button`
+  flex: 1;
+  height: 52px;
+  border: none;
+  border-radius: 12px;
+  background: #f0f0f0;
+  color: #444;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+`;
+
+const DeleteConfirmButton = styled.button`
+  flex: 1;
+  height: 52px;
+  border: none;
+  border-radius: 12px;
+  background: #6A5CE6;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+`;
+
+const ErrorTextInModal = styled.p`
+  color: #6A5CE6;
+  font-size: 13px;
+  text-align: center;
+  margin: 8px 0 0;
 `;

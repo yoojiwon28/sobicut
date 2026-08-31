@@ -76,3 +76,7 @@ export function tagTransactionEmotions(transactionId: number, emotionTagIds: num
     body: JSON.stringify({ emotion_tag_ids: emotionTagIds }),
   });
 }
+
+export function deleteTransaction(id: number) {
+  return apiFetch<{ message: string }>(`/transactions/${id}`, { method: 'DELETE' });
+}
