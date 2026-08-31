@@ -60,8 +60,22 @@ export default function SpendingReport() {
     : [];
 
   const predictedTotal = forecast?.predicted_total ?? 0;
+  // budgetLine 은 차트 점선이 아니라 forecastOverBudget(예산 초과 예상) 판정 전용으로만 사용
   const budgetLine = forecast?.budget ?? 0;
   const forecastOverBudget = forecast ? predictedTotal > budgetLine : false;
+  // 차트 점선 기준값: 직전 달(이번 달 바로 앞) 지출액.
+  // 배열 순서에 의존하지 않도록 이번 달 기준 직전 달의 year/month 를 직접 계산해서 탐색한다.
+  // (1월이면 전년 12월로 롤오버) 일치 항목이 없으면 undefined → 점선 미표시
+  const now = new Date();
+  const prevMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const prevMonthYear = prevMonthDate.getFullYear();
+  const prevMonthNum = prevMonthDate.getMonth() + 1;
+  const prevMonthSpent = forecast?.history?.find(
+    (h) => h.year === prevMonthYear && h.month === prevMonthNum,
+  )?.spent;
+  // 이번 달 예측 지출이 전월 지출을 초과할 때만 점선 표시
+  const showPrevMonthLine =
+    prevMonthSpent !== undefined && prevMonthSpent > 0 && predictedTotal > prevMonthSpent;
   const forecastHistory = (forecast?.history ?? []).map((h) => ({
     label: `${h.month}월`,
     amount: h.spent,
@@ -71,8 +85,13 @@ export default function SpendingReport() {
   const lastMonthLabel = lastMonth?.label ?? '—';
   const lastMonthAmount = lastMonth?.amount ?? 0;
   const chartBars = [...forecastHistory, { label: '이번 달', amount: predictedTotal, isForecast: true }];
-  const chartMax = Math.max(0, ...chartBars.map((b) => b.amount));
-  const budgetLinePercent = chartMax > 0 ? (budgetLine / chartMax) * 100 : 0;
+  const maxSpending = Math.max(0, ...chartBars.map((b) => b.amount));
+  // 점선이 표시되는 경우 predictedTotal > prevMonthSpent 가 보장되므로 전월 지출선은 항상 최대 막대보다 아래.
+  // clamp(0~100)는 방어용으로 유지
+  const prevMonthLinePercent =
+    prevMonthSpent !== undefined && maxSpending > 0
+      ? Math.min(100, Math.max(0, (prevMonthSpent / maxSpending) * 100))
+      : 0;
 
   return (
     <PageWrap>
@@ -220,14 +239,16 @@ export default function SpendingReport() {
             {forecastOverBudget && <WarningText>예산 초과 예상: 과소비에 주의하세요!</WarningText>}
 
             <ChartWrap>
-              <BudgetLine style={{ bottom: `${LABEL_H + (TRACK_H * budgetLinePercent) / 100}px` }}>
-                <BudgetLineScissors>✂</BudgetLineScissors>
-              </BudgetLine>
+              {showPrevMonthLine && (
+                <PrevMonthLine style={{ bottom: `${LABEL_H + (TRACK_H * prevMonthLinePercent) / 100}px` }}>
+                  <PrevMonthLineScissors>✂</PrevMonthLineScissors>
+                </PrevMonthLine>
+              )}
               <ChartBars>
                 {chartBars.map((bar) => (
                   <ChartBarColumn key={bar.label}>
                     <ChartBarTrack>
-                      <ChartBarBarWrap style={{ height: `${chartMax > 0 ? (bar.amount / chartMax) * 100 : 0}%` }}>
+                      <ChartBarBarWrap style={{ height: `${maxSpending > 0 ? (bar.amount / maxSpending) * 100 : 0}%` }}>
                         <ChartBarValue $forecast={'isForecast' in bar && bar.isForecast}>
                           {Math.round(bar.amount / 10000)}
                           {'isForecast' in bar && bar.isForecast && <ForecastTag>예상</ForecastTag>}
@@ -542,7 +563,7 @@ const ChartBarLabel = styled.div`
   text-align: center;
 `;
 
-const BudgetLine = styled.div`
+const PrevMonthLine = styled.div`
   position: absolute;
   left: 83%;
   right: 0;
@@ -550,7 +571,7 @@ const BudgetLine = styled.div`
   z-index: 1;
 `;
 
-const BudgetLineScissors = styled.span`
+const PrevMonthLineScissors = styled.span`
   position: absolute;
   right: -4px;
   top: -9px;
