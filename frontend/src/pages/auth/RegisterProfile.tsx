@@ -5,10 +5,15 @@ import BackButton from '../../components/BackButton';
 import Logo from '../../components/Logo';
 import Modal from '../../components/Modal';
 import { AuthTitle, Field, Label, Select, Input, ButtonPrimary, CheckboxRow, LoadingOverlay, Spinner } from '../../styles/auth.styles';
-import { signup } from '../../api/auth';
+import { signup, login as loginApi } from '../../api/auth';
+import { useAuth } from '../../contexts/AuthContext';
 import { ApiError } from '../../api/client';
+import { NOTIFICATION_TYPES } from '../../utils/notificationTypes';
+import { getVapidPublicKey, subscribePush } from '../../api/notifications';
+import { ensurePushSubscription } from '../../utils/push';
 
 const LIVING_OPTIONS = ['자취', '기숙사', '통학'];
+
 
 function mapIncomeToLevel(income: number): string {
   if (income < 30) return 'under-30';
@@ -105,6 +110,7 @@ type RegisterState = { email: string; password: string; nickname: string };
 export default function RegisterProfile() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { login: authLogin } = useAuth();
   const state = location.state as RegisterState | null;
 
   // Register 단계를 건너뛰고 직접 접근한 경우 되돌려보냄
@@ -124,7 +130,7 @@ export default function RegisterProfile() {
 
   const canSubmit = Boolean(livingType) && agreeDataUse;
 
-  const handleSubmit = async (e: FormEvent) => {
+    const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!state?.email || !canSubmit || submitting) return;
 
@@ -138,6 +144,28 @@ export default function RegisterProfile() {
         residence_type: livingType,
         income_level: mapIncomeToLevel(income),
       });
+
+      const { access_token } = await loginApi(state.email, state.password);
+      authLogin(access_token);
+
+      // 알림 전체 구독 — 실패(권한 거부 등)해도 회원가입 자체는 그대로 진행
+      try {
+        const { public_key } = await getVapidPublicKey();
+        const subscription = await ensurePushSubscription(public_key);
+        const json = subscription.toJSON();
+        const { endpoint, keys } = json;
+        if (endpoint && keys?.p256dh && keys?.auth) {
+          const pushKeys = { p256dh: keys.p256dh, auth: keys.auth };
+          await Promise.all(
+            Object.values(NOTIFICATION_TYPES).map((notification_type) =>
+              subscribePush({ endpoint, keys: pushKeys, notification_type }),
+            ),
+          );
+        }
+      } catch {
+        // 푸시 구독 실패는 무시하고 진행
+      }
+
       navigate('/');
     } catch (err) {
       setError(err instanceof ApiError ? err.message : '회원가입에 실패했어요. 다시 시도해주세요.');
