@@ -19,10 +19,7 @@ import {
   getWalletLevelIndex,
 } from '../utils/wallet';
 import { useScores } from '../hooks/useReports';
-
-
-// TODO: 알림 여부 실제 알림 API
-const hasNotification = true;
+import { getNotifications } from '../api/notifications';
 
 // TODO: 실제로는 새 결제 문자 감지 시 서버에서 파싱+LLM 분류된 값을 내려받아 모달로 표시
 const hasPendingCapture = true;
@@ -31,6 +28,12 @@ const hasPendingCapture = true;
 export default function Home() {
   const navigate = useNavigate();
   const [showCaptureModal, setShowCaptureModal] = useState(hasPendingCapture);
+
+  const { data: notifications = [] } = useQuery({
+    queryKey: ['notifications'],
+    queryFn: () => getNotifications(),
+  });
+  const hasNotification = notifications.some((n) => !n.is_read);
 
   const { data: settings } = useQuery({
     queryKey: ['users', 'me', 'settings'],

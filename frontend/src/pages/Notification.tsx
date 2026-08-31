@@ -11,6 +11,7 @@ import iconImpulse from '../assets/images/notification/icon_impulse.svg';
 import iconClock from '../assets/images/notification/icon_clock.svg';
 import iconGraph from '../assets/images/notification/icon_graph.svg';
 import iconSurvey from '../assets/images/notification/icon_survey.svg';
+import iconWallet from '../assets/images/wallet_icon.svg';
 import angleRightIcon from '../assets/images/angle_right.svg';
 
 const TYPE_ICONS: Record<NotificationType, string> = {
@@ -20,14 +21,16 @@ const TYPE_ICONS: Record<NotificationType, string> = {
   heatmap_time: iconClock,
   heatmap_day: iconGraph,
   satisfaction_request: iconSurvey,
+  no_transaction_reminder: iconWallet,
 };
 
 const TYPE_ROUTES: Partial<Record<NotificationType, string>> = {
-  budget_weekly: '/analysis/report#wallet',
-  budget_monthly: '/analysis/report#wallet',
+  budget_weekly: '/analysis',
+  budget_monthly: '/analysis',
   impulse_warning: '/analysis/report/impulse',
   heatmap_time: '/analysis',
   heatmap_day: '/analysis',
+  no_transaction_reminder: '/expenses/add',
 };
 
 export default function Notification() {
