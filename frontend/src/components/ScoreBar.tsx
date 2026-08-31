@@ -3,8 +3,8 @@ import styled from 'styled-components';
 type ScoreBarProps = {
   value: number;
   max: number;
-  markerValue: number;
-  markerLabel: string;
+  markerValue?: number | null;
+  markerLabel?: string;
   markerValueLabel?: string;
   color?: string;
 };
@@ -22,7 +22,9 @@ export default function ScoreBar({
   color = '#FF7D7D',
 }: ScoreBarProps) {
   const valueRatio = max > 0 ? Math.min(1, Math.max(0, value / max)) : 0;
-  const markerRatio = max > 0 ? Math.min(1, Math.max(0, markerValue / max)) : 0;
+  const hasMarker = markerValue != null;
+  const markerRatio =
+    markerValue != null && max > 0 ? Math.min(1, Math.max(0, markerValue / max)) : 0;
 
   const markerLeft = `${markerRatio * 100}%`;
 
@@ -43,15 +45,19 @@ export default function ScoreBar({
         </Track>
 
         {/* 점선 마커와 라벨은 같은 Inner 안에서 동일한 markerLeft 기준을 공유한다. */}
-        <Marker style={{ left: markerLeft }}>
-          <Scissors>✂</Scissors>
-          <MarkerStem />
-        </Marker>
+        {hasMarker && (
+          <>
+            <Marker style={{ left: markerLeft }}>
+              <Scissors>✂</Scissors>
+              <MarkerStem />
+            </Marker>
 
-        <LabelGroup style={{ left: markerLeft, transform: labelTransform }}>
-          <MarkerLabel>{markerLabel}</MarkerLabel>
-          {markerValueLabel && <MarkerValueLabel>{markerValueLabel}</MarkerValueLabel>}
-        </LabelGroup>
+            <LabelGroup style={{ left: markerLeft, transform: labelTransform }}>
+              {markerLabel && <MarkerLabel>{markerLabel}</MarkerLabel>}
+              {markerValueLabel && <MarkerValueLabel>{markerValueLabel}</MarkerValueLabel>}
+            </LabelGroup>
+          </>
+        )}
       </Inner>
     </Wrap>
   );

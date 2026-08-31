@@ -4,7 +4,8 @@ export type NotificationType =
   | 'impulse_warning'
   | 'heatmap_time'
   | 'heatmap_day'
-  | 'satisfaction_request';
+  | 'satisfaction_request'
+  | 'no_transaction_reminder';
 
 export type AppNotification = {
   id: number;

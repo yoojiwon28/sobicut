@@ -6,6 +6,7 @@ import ScoreBar from '../../components/ScoreBar';
 import RadarChart from '../../components/RadarChart';
 import { PageWrap } from '../../styles/auth.styles';
 import { WALLET_IMAGES, WALLET_GAUGE_COLORS, getWalletLevelIndex } from '../../utils/wallet';
+import { getImpulseGaugeColor } from '../../utils/impulse';
 import {
   useImpulseReport,
   useBptiReport,
@@ -43,6 +44,7 @@ export default function SpendingReport() {
   const forecast = forecastQuery.data;
 
   const impulseScore = impulse?.impulse_score;
+  const impulseGaugeColor = getImpulseGaugeColor(impulse?.is_warning);
   const weekOverWeek = impulse?.week_over_week;
   const impulseDiff = weekOverWeek?.diff ?? 0;
 
@@ -60,8 +62,22 @@ export default function SpendingReport() {
     : [];
 
   const predictedTotal = forecast?.predicted_total ?? 0;
+  // budgetLine 은 차트 점선이 아니라 forecastOverBudget(예산 초과 예상) 판정 전용으로만 사용
   const budgetLine = forecast?.budget ?? 0;
   const forecastOverBudget = forecast ? predictedTotal > budgetLine : false;
+  // 차트 점선 기준값: 직전 달(이번 달 바로 앞) 지출액.
+  // 배열 순서에 의존하지 않도록 이번 달 기준 직전 달의 year/month 를 직접 계산해서 탐색한다.
+  // (1월이면 전년 12월로 롤오버) 일치 항목이 없으면 undefined → 점선 미표시
+  const now = new Date();
+  const prevMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const prevMonthYear = prevMonthDate.getFullYear();
+  const prevMonthNum = prevMonthDate.getMonth() + 1;
+  const prevMonthSpent = forecast?.history?.find(
+    (h) => h.year === prevMonthYear && h.month === prevMonthNum,
+  )?.spent;
+  // 이번 달 예측 지출이 전월 지출을 초과할 때만 점선 표시
+  const showPrevMonthLine =
+    prevMonthSpent !== undefined && prevMonthSpent > 0 && predictedTotal > prevMonthSpent;
   const forecastHistory = (forecast?.history ?? []).map((h) => ({
     label: `${h.month}월`,
     amount: h.spent,
@@ -71,15 +87,13 @@ export default function SpendingReport() {
   const lastMonthLabel = lastMonth?.label ?? '—';
   const lastMonthAmount = lastMonth?.amount ?? 0;
   const chartBars = [...forecastHistory, { label: '이번 달', amount: predictedTotal, isForecast: true }];
-  // 막대 높이는 '지출' 기준으로만 스케일한다. 예산을 최대값에 섞으면(Math.max(maxSpending, budgetLine))
-  // 예산 미달인 달에는 막대가 예산 대비 비율로 쪼그라들고 예산선은 항상 100%(천장)에 붙어버린다.
   const maxSpending = Math.max(0, ...chartBars.map((b) => b.amount));
-  // 예산선 위치는 '지출 최대값' 대비 비율. 예산이 더 크면 clamp 로 차트 상단(100%)에 고정된다.
-  const showBudgetLine = budgetLine > 0 && maxSpending > 0;
-  const budgetLinePercent = showBudgetLine
-    ? Math.min(Math.max((budgetLine / maxSpending) * 100, 0), 100)
-    : 0;
-
+  // 점선이 표시되는 경우 predictedTotal > prevMonthSpent 가 보장되므로 전월 지출선은 항상 최대 막대보다 아래.
+  // clamp(0~100)는 방어용으로 유지
+  const prevMonthLinePercent =
+    prevMonthSpent !== undefined && maxSpending > 0
+      ? Math.min(100, Math.max(0, (prevMonthSpent / maxSpending) * 100))
+      : 0;
   return (
     <PageWrap>
       <BackButton to="/analysis" />
@@ -108,6 +122,7 @@ export default function SpendingReport() {
 
             <ImpulseTrack>
               <ImpulseFill
+                $color={impulseGaugeColor}
                 style={{ width: `${Math.min(100, Math.max(0, impulseScore ?? 0))}%` }}
               />
             </ImpulseTrack>
@@ -226,10 +241,10 @@ export default function SpendingReport() {
             {forecastOverBudget && <WarningText>예산 초과 예상: 과소비에 주의하세요!</WarningText>}
 
             <ChartWrap>
-              {showBudgetLine && (
-                <BudgetLine style={{ bottom: `${LABEL_H + (TRACK_H * budgetLinePercent) / 100}px` }}>
-                  <BudgetLineScissors>✂</BudgetLineScissors>
-                </BudgetLine>
+              {showPrevMonthLine && (
+                <PrevMonthLine style={{ bottom: `${LABEL_H + (TRACK_H * prevMonthLinePercent) / 100}px` }}>
+                  <PrevMonthLineScissors>✂</PrevMonthLineScissors>
+                </PrevMonthLine>
               )}
               <ChartBars>
                 {chartBars.map((bar) => (
@@ -339,10 +354,10 @@ const ImpulseTrack = styled.div`
   overflow: hidden;
 `;
 
-const ImpulseFill = styled.div`
+const ImpulseFill = styled.div<{ $color: string }>`
   height: 100%;
   border-radius: 999px;
-  background: #6a5ce6;
+  background: ${({ $color }) => $color};
   transition: width 0.2s ease;
 `;
 
@@ -550,7 +565,7 @@ const ChartBarLabel = styled.div`
   text-align: center;
 `;
 
-const BudgetLine = styled.div`
+const PrevMonthLine = styled.div`
   position: absolute;
   left: 83%;
   right: 0;
@@ -558,7 +573,7 @@ const BudgetLine = styled.div`
   z-index: 1;
 `;
 
-const BudgetLineScissors = styled.span`
+const PrevMonthLineScissors = styled.span`
   position: absolute;
   right: -4px;
   top: -9px;
