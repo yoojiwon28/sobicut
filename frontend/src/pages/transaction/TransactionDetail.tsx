@@ -47,6 +47,7 @@ export default function TransactionDetail() {
 
   const [merchant, setMerchant] = useState('');
   const [category, setCategory] = useState('');
+  const [amount, setAmount] = useState('');
   const [memo, setMemo] = useState('');
   const [date, setDate] = useState('');
   const [time, setTime] = useState('');
@@ -78,6 +79,7 @@ export default function TransactionDetail() {
     seededRef.current = true;
     setMerchant(tx.merchant ?? '');
     setCategory(tx.category ?? '');
+    setAmount(String(tx.amount));
     setMemo(tx.description ?? '');
     setDate(tx.transaction_date ?? '');
     setTime(tx.transaction_time ?? '');
@@ -131,12 +133,21 @@ export default function TransactionDetail() {
   const tagsChanged =
     planTag !== initialPlanTag || !isSameTagSet(contextTags, initialContextTags);
 
+  const numericAmount = Number(amount);
+  const isAmountValid = amount.length > 0 && Number.isFinite(numericAmount) && numericAmount > 0;
+
+  const adjustAmount = (delta: number) => {
+    const current = Number(amount) || 0;
+    setAmount(String(Math.max(0, current + delta)));
+  };
+
   const isDirty =
     merchant !== (tx.merchant ?? '') ||
     category !== (tx.category ?? '') ||
     memo !== (tx.description ?? '') ||
     date !== (tx.transaction_date ?? '') ||
     time !== (tx.transaction_time ?? '') ||
+    numericAmount !== tx.amount ||
     tagsChanged;
 
   const handleSubmit = () => {
@@ -146,7 +157,7 @@ export default function TransactionDetail() {
     // 조회한 원본을 베이스로, 화면에서 수정한 필드만 덮어써 전체 교체(PUT)한다
     mutation.mutate(
       {
-        amount: tx.amount,
+        amount: numericAmount,
         type: tx.type,
         category,
         merchant: merchant.length > 0 ? merchant : null,
@@ -184,11 +195,25 @@ export default function TransactionDetail() {
       <BackButton to={backTo} />
       <AuthTitle $size={20}>{isExpense ? '지출 상세 내역' : '수입 상세 내역'}</AuthTitle>
 
-      <DetailAmountRow>
-        <Amount>
-          {isExpense ? '-' : '+'}
-          {tx.amount.toLocaleString()} 원
-        </Amount>
+            <DetailAmountRow>
+        <AmountWrap>
+          <AmountSign>{isExpense ? '-' : '+'}</AmountSign>
+          <AmountInput
+            type="text"
+            inputMode="numeric"
+            value={amount ? Number(amount).toLocaleString() : ''}
+            size={Math.max((amount ? Number(amount).toLocaleString() : '').length, 1)}
+            onChange={(e) => {
+              const digits = e.target.value.replace(/[^0-9]/g, '').replace(/^0+(?=\d)/, '');
+              setAmount(digits);
+            }}
+          />
+          <AmountUnit>원</AmountUnit>
+          <AmountStepper>
+            <StepperUpButton type="button" onClick={() => adjustAmount(5000)} aria-label="5,000원 증가" />
+            <StepperDownButton type="button" onClick={() => adjustAmount(-5000)} aria-label="5,000원 감소" />
+          </AmountStepper>
+        </AmountWrap>
         <CategoryIcon
           src={CATEGORY_ICONS[tx.category] ?? (isExpense ? expenseIcon : incomeIcon)}
           alt=""
@@ -266,7 +291,7 @@ export default function TransactionDetail() {
 
       <SubmitButton
         type="button"
-        disabled={!isDirty || mutation.isPending || tagSaving || emotionsPending}
+        disabled={!isDirty || !isAmountValid || mutation.isPending || tagSaving || emotionsPending}
         onClick={handleSubmit}
       >
         수정 완료
@@ -373,9 +398,84 @@ const DetailAmountRow = styled.div`
   margin-bottom: 22px;
 `;
 
-const Amount = styled.span`
+const AmountSign = styled.span`
   font-size: 34px;
   font-weight: 800;
+`;
+
+const AmountWrap = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 4px;
+`;
+
+const AmountInput = styled.input`
+  border: none;
+  border-bottom: 2px solid #E2DEFF;
+  background: none;
+  font-family: inherit;
+  font-size: 34px;
+  font-weight: 800;
+  color: #222;
+  padding: 0 0 2px;
+  min-width: 20px;
+
+  &:focus {
+    outline: none;
+    border-bottom-color: #6A5CE6;
+  }
+`;
+
+const AmountStepper = styled.div`
+  display: flex;
+  flex-direction: column;
+  margin-left: 4px;
+`;
+
+const StepperButton = styled.button`
+  width: 16px;
+  height: 12px;
+  border: none;
+  background: none;
+  padding: 0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+`;
+
+const StepperUpButton = styled(StepperButton)`
+  &::before {
+    content: '';
+    width: 0;
+    height: 0;
+    border-left: 4px solid transparent;
+    border-right: 4px solid transparent;
+    border-bottom: 5px solid #B8B4E0;
+  }
+  &:hover::before {
+    border-bottom-color: #6A5CE6;
+  }
+`;
+
+const StepperDownButton = styled(StepperButton)`
+  &::before {
+    content: '';
+    width: 0;
+    height: 0;
+    border-left: 4px solid transparent;
+    border-right: 4px solid transparent;
+    border-top: 5px solid #B8B4E0;
+  }
+  &:hover::before {
+    border-top-color: #6A5CE6;
+  }
+`;
+
+const AmountUnit = styled.span`
+  font-size: 20px;
+  font-weight: 700;
+  color: #444;
 `;
 
 const CategoryIcon = styled.img.attrs({ width: 30, height: 30 })`
