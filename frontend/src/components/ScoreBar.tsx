@@ -3,8 +3,8 @@ import styled from 'styled-components';
 type ScoreBarProps = {
   value: number;
   max: number;
-  markerValue: number;
-  markerLabel: string;
+  markerValue?: number | null;
+  markerLabel?: string;
   markerValueLabel?: string;
   color?: string;
 };
@@ -18,18 +18,25 @@ export default function ScoreBar({
   color = '#FF7D7D',
 }: ScoreBarProps) {
   const valuePercent = Math.min(100, Math.max(0, (value / max) * 100));
-  const markerPercent = Math.min(100, Math.max(0, (markerValue / max) * 100));
+  const hasMarker = markerValue != null;
+  const markerPercent = hasMarker ? Math.min(100, Math.max(0, (markerValue / max) * 100)) : 0;
 
   return (
     <Wrap>
       <Track>
         <Fill style={{ width: `${valuePercent}%`, background: color }} />
-        <Marker style={{ left: `${markerPercent}%` }}>
-          <Scissors>✂</Scissors>
-        </Marker>
+        {hasMarker && (
+          <Marker style={{ left: `${markerPercent}%` }}>
+            <Scissors>✂</Scissors>
+          </Marker>
+        )}
       </Track>
-      <MarkerLabel style={{ left: `${markerPercent}%` }}>{markerLabel}</MarkerLabel>
-      {markerValueLabel && <MarkerValueLabel style={{ left: `${markerPercent}%` }}>{markerValueLabel}</MarkerValueLabel>}
+      {hasMarker && markerLabel && (
+        <MarkerLabel style={{ left: `${markerPercent}%` }}>{markerLabel}</MarkerLabel>
+      )}
+      {hasMarker && markerValueLabel && (
+        <MarkerValueLabel style={{ left: `${markerPercent}%` }}>{markerValueLabel}</MarkerValueLabel>
+      )}
     </Wrap>
   );
 }
