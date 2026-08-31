@@ -3,6 +3,7 @@ import BackButton from '../../components/BackButton';
 import ScoreBar from '../../components/ScoreBar';
 import { PageWrap } from '../../styles/auth.styles';
 import { useImpulseReport } from '../../hooks/useReports';
+import { getImpulseGaugeColor } from '../../utils/impulse';
 
 // GET /reports/impulse/factors 더미데이터
 const DUMMY_FACTORS = {
@@ -45,7 +46,7 @@ export default function ImpulseReport() {
               markerValue={peerAvgImpulseScore}
               markerLabel="또래 평균 점수"
               markerValueLabel={peerAvgImpulseScore != null ? `${peerAvgImpulseScore}점` : undefined}
-              color="#FF7D7D"
+              color={getImpulseGaugeColor(impulse?.is_warning)}
             />
           </BarWrap>
         </>

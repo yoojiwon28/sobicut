@@ -6,6 +6,7 @@ import ScoreBar from '../../components/ScoreBar';
 import RadarChart from '../../components/RadarChart';
 import { PageWrap } from '../../styles/auth.styles';
 import { WALLET_IMAGES, WALLET_GAUGE_COLORS, getWalletLevelIndex } from '../../utils/wallet';
+import { getImpulseGaugeColor } from '../../utils/impulse';
 import {
   useImpulseReport,
   useBptiReport,
@@ -43,6 +44,7 @@ export default function SpendingReport() {
   const forecast = forecastQuery.data;
 
   const impulseScore = impulse?.impulse_score;
+  const impulseGaugeColor = getImpulseGaugeColor(impulse?.is_warning);
   const weekOverWeek = impulse?.week_over_week;
   const impulseDiff = weekOverWeek?.diff ?? 0;
 
@@ -121,6 +123,7 @@ export default function SpendingReport() {
 
             <ImpulseTrack>
               <ImpulseFill
+                $color={impulseGaugeColor}
                 style={{ width: `${Math.min(100, Math.max(0, impulseScore ?? 0))}%` }}
               />
             </ImpulseTrack>
@@ -352,10 +355,10 @@ const ImpulseTrack = styled.div`
   overflow: hidden;
 `;
 
-const ImpulseFill = styled.div`
+const ImpulseFill = styled.div<{ $color: string }>`
   height: 100%;
   border-radius: 999px;
-  background: #6a5ce6;
+  background: ${({ $color }) => $color};
   transition: width 0.2s ease;
 `;
 
