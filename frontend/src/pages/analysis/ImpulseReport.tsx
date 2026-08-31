@@ -2,12 +2,7 @@ import styled from 'styled-components';
 import BackButton from '../../components/BackButton';
 import ScoreBar from '../../components/ScoreBar';
 import { PageWrap } from '../../styles/auth.styles';
-
-// GET /reports/impulse 더미데이터
-const DUMMY_IMPULSE = {
-  score: 67,
-  peerAverage: 60,
-};
+import { useImpulseReport } from '../../hooks/useReports';
 
 // GET /reports/impulse/factors 더미데이터
 const DUMMY_FACTORS = {
@@ -23,25 +18,38 @@ const DUMMY_PRESCRIPTIONS = [
 ];
 
 export default function ImpulseReport() {
+  const impulseQuery = useImpulseReport();
+  const impulse = impulseQuery.data;
+
+  const impulseScore = impulse?.impulse_score;
+  const peerAvgImpulseScore = impulse?.peer_avg_impulse_score ?? null;
+
   return (
     <PageWrap>
       <BackButton to="/analysis/report" />
 
-      <Headline>
-        나의 충동 지수는
-        <br />
-        <strong>{DUMMY_IMPULSE.score}점</strong>이에요
-      </Headline>
+      {impulseQuery.isError ? (
+        <LoadError>불러오지 못했어요</LoadError>
+      ) : (
+        <>
+          <Headline>
+            나의 충동 지수는
+            <br />
+            <strong>{impulseScore ?? '—'}점</strong>이에요
+          </Headline>
 
-      <BarWrap>
-        <ScoreBar
-          value={DUMMY_IMPULSE.score}
-          max={100}
-          markerValue={DUMMY_IMPULSE.peerAverage}
-          markerLabel="또래 평균 점수"
-          markerValueLabel={`${DUMMY_IMPULSE.peerAverage}점`}
-        />
-      </BarWrap>
+          <BarWrap>
+            <ScoreBar
+              value={impulseScore ?? 0}
+              max={100}
+              markerValue={peerAvgImpulseScore}
+              markerLabel="또래 평균 점수"
+              markerValueLabel={peerAvgImpulseScore != null ? `${peerAvgImpulseScore}점` : undefined}
+              color="#FF7D7D"
+            />
+          </BarWrap>
+        </>
+      )}
 
       <Card>
         <SectionTitle>점수에 영향을 준 정보예요</SectionTitle>
@@ -92,6 +100,13 @@ const Headline = styled.h1`
 
 const BarWrap = styled.div`
   margin-bottom: 34px;
+`;
+
+const LoadError = styled.div`
+  font-size: 14px;
+  color: #999;
+  text-align: center;
+  padding: 40px 0;
 `;
 
 const Card = styled.div`
