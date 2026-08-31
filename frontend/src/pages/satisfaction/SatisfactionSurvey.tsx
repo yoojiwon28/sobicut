@@ -27,7 +27,9 @@ export default function SatisfactionSurvey() {
   const { data: pending, isLoading, isError } = usePendingSatisfactions();
 
   // transaction_id 가 일치하는 pending 항목들 중에서
-  // day_type 쿼리가 있으면 그 회차를, 없으면 첫 번째 회차를 사용한다.
+  // day_type 쿼리가 있으면 그 회차를, 없으면 due_date 가 가장 최근인 회차를 사용한다.
+  // (백엔드는 마감 지난 pending 을 만료 처리하지 않고 계속 내려주므로
+  //  프론트에서 최신 회차만 보여준다.)
   // useParams 의 transactionId 는 문자열이고, API 응답의 transaction_id 가
   // 런타임에서 문자열로 올 수도 있으므로 양쪽 모두 문자열로 비교한다.
   const candidates = (pending ?? []).filter(
@@ -35,7 +37,8 @@ export default function SatisfactionSurvey() {
   );
   const item = dayTypeParam
     ? candidates.find((p) => p.day_type === dayTypeParam)
-    : candidates[0];
+    : // due_date 는 "YYYY-MM-DD" 문자열이라 문자열 내림차순 비교로 최신 회차를 찾을 수 있다.
+      [...candidates].sort((a, b) => (a.due_date < b.due_date ? 1 : a.due_date > b.due_date ? -1 : 0))[0];
 
   const mutation = useMutation({
     mutationFn: () =>
