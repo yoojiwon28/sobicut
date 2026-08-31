@@ -13,14 +13,31 @@ import {
   useWalletTemperature,
   useMonthlyForecast,
 } from '../../hooks/useReports';
+import fireImg from '../../assets/images/bpti/fire.png';
+import fogImg from '../../assets/images/bpti/fog.png';
+import lazyImg from '../../assets/images/bpti/lazy.png';
+import sageImg from '../../assets/images/bpti/sage.png';
+import visionImg from '../../assets/images/bpti/vision.png';
 
 // API 값이 0~100 스케일이므로 max 는 100
 const BPTI_TAG_MAX = 100;
+
+const BPTI_IMAGES: Record<string, string> = {
+  FIRE: fireImg,
+  FOG: fogImg,
+  LAZY: lazyImg,
+  SAGE: sageImg,
+  VISION: visionImg,
+};
 
 const CHART_H = 190;
 const VALUE_H = 34;
 const LABEL_H = 27;
 const TRACK_H = CHART_H - VALUE_H - LABEL_H;
+
+function splitSentences(text: string): string[] {
+  return text.split(/(?<=[.!?])\s+/).filter(Boolean);
+}
 
 export default function SpendingReport() {
   const navigate = useNavigate();
@@ -143,9 +160,24 @@ export default function SpendingReport() {
             <BptiType>[ {bpti?.type ?? '—'} - {bpti?.label ?? '—'} ]</BptiType>
             <BptiDefinition>{bpti?.definition ?? '—'}</BptiDefinition>
 
+            {bpti?.type && BPTI_IMAGES[bpti.type] && (
+              <BptiCharacterBox>
+                <BptiCharacterImg src={BPTI_IMAGES[bpti.type]} alt={bpti.label ?? bpti.type} />
+              </BptiCharacterBox>
+            )}
+
             <RadarChart axes={bptiAxes} max={BPTI_TAG_MAX} />
 
-            <BptiMessage>{bpti?.message ?? '—'}</BptiMessage>
+            <BptiMessage>
+              {bpti?.message
+                ? splitSentences(bpti.message).map((sentence, i, arr) => (
+                    <span key={i}>
+                      {sentence}
+                      {i < arr.length - 1 && <br />}
+                    </span>
+                  ))
+                : '—'}
+            </BptiMessage>
           </>
         )}
       </Card>
@@ -393,6 +425,18 @@ const BptiDefinition = styled.div`
   color: #999;
   text-align: center;
   margin: 4px 0 20px;
+`;
+
+const BptiCharacterBox = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 0 20px;
+`;
+const BptiCharacterImg = styled.img`
+  width: 100%;
+  max-width: 400px;
+  height: auto;
 `;
 
 const BptiMessage = styled.p`
