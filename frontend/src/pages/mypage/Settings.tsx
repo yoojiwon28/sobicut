@@ -17,13 +17,8 @@ import {
 } from '../../api/notifications';
 import { ensurePushSubscription } from '../../utils/push';
 import { ApiError } from '../../api/client';
+import { NOTIFICATION_TYPES } from '../../utils/notificationTypes';
 
-const NOTIFICATION_TYPES = {
-  heatmap: '히트맵알림',
-  ledgerHelper: '가계부기록도우미',
-  survey: '만족도조사알림',
-  budgetImpulse: '충동지수예산초과알림',
-} as const;
 
 const SUBSCRIPTIONS_QUERY_KEY = ['notifications', 'subscriptions'];
 
@@ -110,7 +105,7 @@ export default function Settings() {
         <ArrowRow to="/mypage/edit" label="내 정보 수정하기" />
 
         <ToggleRow>
-            <span>소비컷 알림</span>
+            <span>소비컷 패턴 알림</span>
             <ToggleSwitch
               checked={isSubscribed(NOTIFICATION_TYPES.heatmap)}
               onChange={(v) => handleToggleSubscription(NOTIFICATION_TYPES.heatmap, v)}
