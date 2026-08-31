@@ -26,6 +26,10 @@ const CHARACTER_IMAGES: Record<number, string> = {
   6: cuttyLv6,
 };
 
+function splitSentences(text: string): string[] {
+  return text.split(/(?<=[.!?])\s+/).filter(Boolean);
+}
+
 export default function MyPage() {
   const [showHelp, setShowHelp] = useState(false);
   const { data: level } = useQuery({
@@ -95,7 +99,14 @@ export default function MyPage() {
           <CharacterImg src={characterSrc} alt={level.level_name} />
         </CharacterBox>
 
-        <MentBubble>{level.description}</MentBubble>
+        <MentBubble>
+          {splitSentences(level.description).map((sentence, i, arr) => (
+            <span key={i}>
+              {sentence}
+              {i < arr.length - 1 && <br />}
+            </span>
+          ))}
+        </MentBubble>
       </LevelSection>
 
       <MenuList>
