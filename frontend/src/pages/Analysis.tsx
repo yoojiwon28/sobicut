@@ -204,7 +204,7 @@ export default function Analysis() {
         <StatCard>
           <StatLabel>BPTI</StatLabel>
           <StatIcon src={cartIcon} alt="" width={26} height={26} />
-          <StatValue $color="#FF4040">{displayScore(scoresQuery, scores?.bpti.type ?? '')}</StatValue>
+          <StatValue $color="#FF4040">{displayScore(scoresQuery, scores?.bpti?.type ?? '')}</StatValue>
         </StatCard>
       </StatRow>
 

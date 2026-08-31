@@ -94,7 +94,6 @@ export default function SpendingReport() {
     prevMonthSpent !== undefined && maxSpending > 0
       ? Math.min(100, Math.max(0, (prevMonthSpent / maxSpending) * 100))
       : 0;
-
   return (
     <PageWrap>
       <BackButton to="/analysis" />
