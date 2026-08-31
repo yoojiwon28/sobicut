@@ -11,6 +11,7 @@ import iconImpulse from '../assets/images/notification/icon_impulse.svg';
 import iconClock from '../assets/images/notification/icon_clock.svg';
 import iconGraph from '../assets/images/notification/icon_graph.svg';
 import iconSurvey from '../assets/images/notification/icon_survey.svg';
+import angleRightIcon from '../assets/images/angle_right.svg';
 
 const TYPE_ICONS: Record<NotificationType, string> = {
   budget_weekly: iconBudget,
@@ -19,6 +20,15 @@ const TYPE_ICONS: Record<NotificationType, string> = {
   heatmap_time: iconClock,
   heatmap_day: iconGraph,
   satisfaction_request: iconSurvey,
+};
+
+// 가계부 도우미 알림 추가되면 수정된 type에 따라 수정 필요
+const TYPE_ROUTES: Partial<Record<NotificationType, string>> = {
+  budget_weekly: '/analysis',
+  budget_monthly: '/analysis',
+  impulse_warning: '/analysis/report/impulse',
+  heatmap_time: '/analysis',
+  heatmap_day: '/analysis',
 };
 
 export default function Notification() {
@@ -41,7 +51,10 @@ export default function Notification() {
     handleMarkRead(n.id);
     if (n.type === 'satisfaction_request' && n.transaction_id != null) {
       navigate(`/satisfaction/${n.transaction_id}`);
+      return;
     }
+    const route = TYPE_ROUTES[n.type];
+    if (route) navigate(route);
   };
 
   return (
@@ -73,6 +86,7 @@ export default function Notification() {
                 <ItemMessage>{n.message}</ItemMessage>
                 <ItemTime>{formatShortDateTime(n.created_at)}</ItemTime>
               </Content>
+              <ChevronIcon src={angleRightIcon} alt="" width={18} height={18} />
             </Item>
           ))}
         </List>
@@ -159,6 +173,12 @@ const ItemTime = styled.div`
   font-size: 11px;
   color: #999;
   margin-top: 6px;
+`;
+
+const ChevronIcon = styled.img`
+  flex-shrink: 0;
+  align-self: center;
+  opacity: 0.4;
 `;
 
 const EmptyText = styled.div`
