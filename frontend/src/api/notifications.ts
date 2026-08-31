@@ -1,4 +1,5 @@
 import { apiFetch } from './client';
+import type { AppNotification } from '../types/notification';
 
 export type VapidPublicKeyResponse = { public_key: string };
 export function getVapidPublicKey() {
@@ -26,4 +27,21 @@ export function unsubscribePush(payload: PushUnsubscribePayload) {
     method: 'POST',
     body: JSON.stringify(payload),
   });
+}
+
+export function getActiveSubscriptions() {
+  return apiFetch<string[]>('/notifications/subscriptions');
+}
+
+export function getNotifications(type?: string) {
+  const qs = type ? `?type=${encodeURIComponent(type)}` : '';
+  return apiFetch<AppNotification[]>(`/notifications${qs}`);
+}
+
+export function markNotificationRead(id: number) {
+  return apiFetch<{ message: string }>(`/notifications/${id}`, { method: 'PUT' });
+}
+
+export function markAllNotificationsRead() {
+  return apiFetch<{ message: string }>('/notifications/read-all', { method: 'PUT' });
 }
