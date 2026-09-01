@@ -1,7 +1,7 @@
 export type NotificationType =
   | 'budget_weekly'
   | 'budget_monthly'
-  | 'impulse_warning'
+  | 'impulse_monthly_trend'
   | 'heatmap_time'
   | 'heatmap_day'
   | 'satisfaction_request'
