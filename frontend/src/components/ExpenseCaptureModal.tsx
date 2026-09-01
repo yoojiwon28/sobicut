@@ -70,11 +70,17 @@ export default function ExpenseCaptureModal({ rawText, onClose }: ExpenseCapture
 
     const run = async () => {
       let text = '';
-      try {
-        text = await navigator.clipboard.readText();
-      } catch {
-        // 클립보드 권한 거부/미지원 → 폴백 원문 사용, 그래도 없으면 빈 폼으로 연다.
-        text = rawText ?? '';
+      if (rawText && rawText.trim()) {
+        // 호출부가 파싱할 원문(클립보드에서 이미 검증된 텍스트)을 넘겨준 경우
+        // 클립보드를 다시 읽지 않고 그 원문을 그대로 파싱 대상으로 쓴다.
+        text = rawText;
+      } else {
+        try {
+          text = await navigator.clipboard.readText();
+        } catch {
+          // 클립보드 권한 거부/미지원 → 폴백 원문 사용, 그래도 없으면 빈 폼으로 연다.
+          text = rawText ?? '';
+        }
       }
       if (!text.trim()) text = rawText ?? '';
 
