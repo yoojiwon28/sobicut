@@ -18,6 +18,8 @@ import fogImg from '../../assets/images/bpti/fog.png';
 import lazyImg from '../../assets/images/bpti/lazy.png';
 import sageImg from '../../assets/images/bpti/sage.png';
 import visionImg from '../../assets/images/bpti/vision.png';
+import { useQuery } from '@tanstack/react-query';
+import { getDailyReport } from '../../api/reports';
 
 // API 값이 0~100 스케일이므로 max 는 100
 const BPTI_TAG_MAX = 100;
@@ -35,9 +37,12 @@ const VALUE_H = 34;
 const LABEL_H = 27;
 const TRACK_H = CHART_H - VALUE_H - LABEL_H;
 
+
 function splitSentences(text: string): string[] {
   return text.split(/(?<=[.!?])\s+/).filter(Boolean);
 }
+
+
 
 export default function SpendingReport() {
   const navigate = useNavigate();
@@ -48,6 +53,16 @@ export default function SpendingReport() {
   const bptiQuery = useBptiReport();
   const walletQuery = useWalletTemperature();
   const forecastQuery = useMonthlyForecast();
+
+  const today = new Date();
+  const dailyReportQuery = useQuery({
+    queryKey: ['reports', 'daily', today.getFullYear(), today.getMonth() + 1],
+    queryFn: () => getDailyReport({ year: today.getFullYear(), month: today.getMonth() + 1 }),
+  });
+  const dailyReport = dailyReportQuery.data ?? [];
+  const totalIncome = dailyReport.reduce((sum, d) => sum + d.income, 0);
+  const totalExpense = dailyReport.reduce((sum, d) => sum + d.expense, 0);
+  const totalRemain = totalIncome - totalExpense;
 
   useEffect(() => {
     if (location.hash === '#wallet') {
@@ -70,9 +85,6 @@ export default function SpendingReport() {
   const walletDiff = myTemp != null && peerAvgTemp != null ? myTemp - peerAvgTemp : 0;
   const walletLevelIndex = getWalletLevelIndex(wallet?.level ?? '');
   const walletGaugeColor = WALLET_GAUGE_COLORS[walletLevelIndex];
-  const walletBudget = wallet?.my_budget ?? 0;
-  const walletSpent = wallet?.my_spent ?? 0;
-  const walletRemain = walletBudget - walletSpent;
 
   const bptiAxes = bpti
     ? Object.entries(bpti.emotion_radar).map(([label, value]) => ({ label, value }))
@@ -232,25 +244,25 @@ export default function SpendingReport() {
           </>
         )}
       </Card>
-
+ 
       <Card>
-        {walletQuery.isError ? (
+        {dailyReportQuery.isError ? (
           <CardError>불러오지 못했어요</CardError>
         ) : (
           <WalletStatusCard>
             <WalletStatusTitle>이번 달 지갑 현황</WalletStatusTitle>
             <WalletStatusRow>
               <span>수입</span>
-              <strong>{wallet ? `${walletBudget.toLocaleString()}원` : '—'}</strong>
+              <strong>{dailyReportQuery.data ? `${totalIncome.toLocaleString()}원` : '—'}</strong>
             </WalletStatusRow>
             <WalletStatusRow>
               <span>소비</span>
-              <strong>{wallet ? `${walletSpent.toLocaleString()}원` : '—'}</strong>
+              <strong>{dailyReportQuery.data ? `${totalExpense.toLocaleString()}원` : '—'}</strong>
             </WalletStatusRow>
             <WalletStatusDivider />
             <WalletStatusRow>
               <span>남은 금액</span>
-              <strong>{wallet ? `${walletRemain.toLocaleString()}원` : '—'}</strong>
+              <strong>{dailyReportQuery.data ? `${totalRemain.toLocaleString()}원` : '—'}</strong>
             </WalletStatusRow>
           </WalletStatusCard>
         )}
