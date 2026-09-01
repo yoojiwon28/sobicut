@@ -166,10 +166,10 @@ export default function Analysis() {
   const maxCell = Math.max(1, ...heatmap.flat());
 
   const insightMessage = useMemo(() => {
-    const peak = heatmapQuery.data?.peak;
-    if (!peak) return null;
-    return { highlight: peak.notification_label, suffix: '이 작동 중이에요' };
-  }, [heatmapQuery.data]);
+    const peakTimeSlot = heatmapQuery.data?.peak_time_slot;
+    if (!peakTimeSlot?.label) return null;
+    return { highlight: peakTimeSlot.label, suffix: '이 작동 중이에요' };
+  }, [heatmapQuery.data?.peak_time_slot]);
 
   const remainText = (remain: number) =>
     remain >= 0 ? `예산이 ${remain.toLocaleString()}원 남았어요` : `예산을 ${Math.abs(remain).toLocaleString()}원 초과했어요`;
