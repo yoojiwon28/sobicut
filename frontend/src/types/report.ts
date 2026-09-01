@@ -103,6 +103,7 @@ export type CategoryReport = {
 
 // GET /reports/heatmap (요일 × 시간대 소비 집계 — year/month optional, 없으면 이번 달)
 // 주의: 값이 있는 셀만 내려온다. day는 "월"~"일", time_slot은 "새벽"/"아침"/"점심"/"저녁"/"밤".
+// peak는 peak_day(요일 피크 + 안내 문구)와 peak_time_slot(시간대 피크 + 알림 라벨)으로 분리됨.
 export type HeatmapReport = {
   heatmap: {
     day: string;
@@ -110,11 +111,8 @@ export type HeatmapReport = {
     amount: number;
     count: number;
   }[];
-  peak: {
-    day: string;
-    time_slot: string;
-    notification_label: string;
-  } | null;
+  peak_day: { day: string; message: string } | null;
+  peak_time_slot: { time_slot: string; label: string } | null;
 };
 
 // GET /reports/budget-status (year/month optional — 없으면 이번 달)
