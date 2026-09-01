@@ -20,7 +20,7 @@ export const DUMMY_NOTIFICATIONS: AppNotification[] = [
   },
   {
     id: 3,
-    type: 'impulse_warning',
+    type: 'impulse_monthly_trend',
     title: '충동 소비 경고',
     message: '최근 충동 지수가 평소보다 높아요. 잠깐 멈춰볼까요?',
     is_read: true,
