@@ -9,7 +9,6 @@ import { ButtonPrimary } from '../styles/auth.styles';
 import { getSettings } from '../api/users';
 import { getTransactions } from '../api/transactions';
 import { toDateKey } from '../utils/date';
-import { DUMMY_CAPTURED_SMS } from '../mocks/pendingCapture';
 import notificationIcon from '../assets/images/notification_icon.svg';
 import {
   WALLET_IMAGES,
@@ -20,14 +19,11 @@ import {
 } from '../utils/wallet';
 import { useScores } from '../hooks/useReports';
 import { getNotifications } from '../api/notifications';
-
-// TODO: 실제로는 새 결제 문자 감지 시 서버에서 파싱+LLM 분류된 값을 내려받아 모달로 표시
-const hasPendingCapture = true;
-
+import { useClipboardCapture } from '../hooks/useClipboardCapture';
 
 export default function Home() {
   const navigate = useNavigate();
-  const [showCaptureModal, setShowCaptureModal] = useState(hasPendingCapture);
+  const { isOpen: showCaptureModal, clipboardText, closeCapture } = useClipboardCapture();
 
   const { data: notifications = [] } = useQuery({
     queryKey: ['notifications'],
@@ -168,7 +164,7 @@ export default function Home() {
       </BottomSection>
 
       {showCaptureModal && (
-        <ExpenseCaptureModal rawText={DUMMY_CAPTURED_SMS} onClose={() => setShowCaptureModal(false)} />
+        <ExpenseCaptureModal rawText={clipboardText} onClose={closeCapture} />
       )}
     </Page>
   );
