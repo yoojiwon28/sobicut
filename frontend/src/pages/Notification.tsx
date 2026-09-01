@@ -17,7 +17,7 @@ import angleRightIcon from '../assets/images/angle_right.svg';
 const TYPE_ICONS: Record<NotificationType, string> = {
   budget_weekly: iconBudget,
   budget_monthly: iconBudget,
-  impulse_warning: iconImpulse,
+  impulse_monthly_trend: iconImpulse,
   heatmap_time: iconClock,
   heatmap_day: iconGraph,
   satisfaction_request: iconSurvey,
@@ -27,7 +27,7 @@ const TYPE_ICONS: Record<NotificationType, string> = {
 const TYPE_ROUTES: Partial<Record<NotificationType, string>> = {
   budget_weekly: '/analysis',
   budget_monthly: '/analysis',
-  impulse_warning: '/analysis/report/impulse',
+  impulse_monthly_trend: '/analysis/report/impulse',
   heatmap_time: '/analysis',
   heatmap_day: '/analysis',
   no_transaction_reminder: '/expenses/add',
