@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import { PageWrap } from '../styles/auth.styles';
@@ -141,6 +141,18 @@ export default function Analysis() {
 
   // 상단 3개 카드 도움말 추가
   const [openHelp, setOpenHelp] = useState<'wallet' | 'impulse' | 'bpti' | null>(null);
+  
+  useEffect(() => {
+    if (openHelp === null) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest('[data-help-toggle]')) {
+        setOpenHelp(null);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [openHelp]);
 
   // 예산 현황 — 주간 블록은 오늘 기준, 월간 블록은 budgetMonth 기준
   // (budgetMonth가 이번 달이면 queryKey 동일 → 캐시 공유)
@@ -242,13 +254,14 @@ export default function Analysis() {
         <StatCard>
           <HelpIconButton
             type="button"
+            data-help-toggle
             aria-label="지갑 온도 도움말"
             onClick={() => setOpenHelp((v) => (v === 'wallet' ? null : 'wallet'))}
           >
             <img src={infoIcon} alt="" width={14} height={14} />
           </HelpIconButton>
           {openHelp === 'wallet' && (
-            <HelpBubble>
+            <HelpBubble data-help-toggle>
               <HelpChunks chunks={STAT_HELP_TEXT.wallet} />
             </HelpBubble>
           )}
@@ -264,6 +277,7 @@ export default function Analysis() {
           <HelpIconButton
             type="button"
             aria-label="충동 지수 도움말"
+            data-help-toggle
             onClick={() => setOpenHelp((v) => (v === 'impulse' ? null : 'impulse'))}
           >
             <img src={infoIcon} alt="" width={14} height={14} />
@@ -281,6 +295,7 @@ export default function Analysis() {
           <HelpIconButton
             type="button"
             aria-label="BPTI 도움말"
+            data-help-toggle
             onClick={() => setOpenHelp((v) => (v === 'bpti' ? null : 'bpti'))}
           >
             <img src={infoIcon} alt="" width={14} height={14} />
