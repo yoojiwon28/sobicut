@@ -18,6 +18,7 @@ import {
   AmountUnit,
   StepButton,
 } from '../styles/field.styles';
+import { useQueryClient } from '@tanstack/react-query';
 
 // TODO: 꼭 필요한 항목 위주로 임시 구성, 확정 필요
 const INCOME_SOURCES = ['용돈', '아르바이트', '장학금/지원금', '환급/캐시백', '선물/축의금', '기타'];
@@ -30,6 +31,8 @@ const toTimeValue = (date: Date) =>
 
 export default function AddIncome() {
   const navigate = useNavigate();
+
+  const queryClient = useQueryClient();
 
   const [amount, setAmount] = useState('');
   const [date, setDate] = useState(toDateInputValue(new Date()));
@@ -61,6 +64,8 @@ export default function AddIncome() {
         transaction_date: date,
         transaction_time: time,
         });
+        queryClient.invalidateQueries({ queryKey: ['transactions'] });
+        queryClient.invalidateQueries({ queryKey: ['reports'] });
         navigate('/');
     } catch (err) {
         setError(err instanceof ApiError ? err.message : '등록에 실패했어요. 다시 시도해주세요.');

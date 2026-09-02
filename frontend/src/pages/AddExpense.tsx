@@ -1,6 +1,6 @@
 import { useMemo, useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import styled from 'styled-components';
 import BackButton from '../components/BackButton';
 import ChipSelect from '../components/ChipSelect';
@@ -43,6 +43,8 @@ const toTimeValue = (date: Date) =>
 
 export default function AddExpense() {
   const navigate = useNavigate();
+
+  const queryClient = useQueryClient();
 
   const [amount, setAmount] = useState('');
   const [merchant, setMerchant] = useState('');
@@ -129,6 +131,8 @@ export default function AddExpense() {
         await tagTransactionEmotions(id, emotionTagIds);
       }
 
+      queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['reports'] });
       navigate('/');
     } catch (err) {
       setSubmitError(err instanceof ApiError ? err.message : '등록에 실패했어요. 다시 시도해주세요.');
