@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import { PageWrap } from '../styles/auth.styles';
@@ -10,23 +10,51 @@ import angleRightIcon from '../assets/images/angle_right.svg';
 import angleLeftIcon from '../assets/images/angle_left.svg';
 import impulseIcon from '../assets/images/impulse.svg';
 import cartIcon from '../assets/images/cart.svg';
-import { WALLET_GAUGE_COLORS, getWalletLevelIndex } from '../utils/wallet';
+import { WALLET_IMAGES, WALLET_GAUGE_COLORS, getWalletLevelIndex } from '../utils/wallet';
+import infoIcon from '../assets/images/info_icon.svg';
 import fireImg from '../assets/images/bpti/fire.png';
 import fogImg from '../assets/images/bpti/fog.png';
 import lazyImg from '../assets/images/bpti/lazy.png';
 import sageImg from '../assets/images/bpti/sage.png';
 import visionImg from '../assets/images/bpti/vision.png';
 
-function WalletIcon({ color }: { color: string }) {
+type HelpChunk = { text: string; strong?: boolean };
+
+const STAT_HELP_TEXT: Record<'wallet' | 'impulse' | 'bpti', HelpChunk[]> = {
+  wallet: [
+    { text: '예산 대비 이번 달 지출 비율을 온도로 표현해요. 0°C부터 시작해서 ' },
+    { text: '낮을수록 여유있고 안정적', strong: true },
+    { text: '이에요. ' },
+    { text: '100°C를 넘으면 예산을 초과', strong: true },
+    { text: '한 상태예요.' },
+  ],
+  impulse: [
+    { text: '이번 달 지출들의 충동 소비 정도를 0~100점으로 나타내요. ' },
+    { text: '낮을수록 신중한 소비', strong: true },
+    { text: '고, ' },
+    { text: '75점을 넘으면 충동 소비 경고', strong: true },
+    { text: '가 떠요.' },
+  ],
+  bpti: [
+    { text: '5가지 소비 성격 유형', strong: true },
+    { text: ' 중 나에게 해당하는 유형을 보여줘요. 내 ' },
+    { text: '소비 성향의 특징', strong: true },
+    { text: '을 알려주는 지표예요.' },
+  ],
+};
+
+function HelpChunks({ chunks }: { chunks: HelpChunk[] }) {
   return (
-    <svg width="33" height="26" viewBox="0 0 33 26" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path
-        d="M0 3.25C0 1.4625 1.485 0 3.3 0H28.05C28.4876 0 28.9073 0.171205 29.2167 0.475951C29.5262 0.780698 29.7 1.19402 29.7 1.625V3.25H3.3V4.875H31.35C31.7876 4.875 32.2073 5.04621 32.5167 5.35095C32.8262 5.6557 33 6.06902 33 6.5V22.75C33 23.612 32.6523 24.4386 32.0335 25.0481C31.4146 25.6576 30.5752 26 29.7 26H3.3C2.42479 26 1.58542 25.6576 0.966548 25.0481C0.347678 24.4386 0 23.612 0 22.75V3.25ZM27.225 17.875C27.8814 17.875 28.5109 17.6182 28.9751 17.1611C29.4392 16.704 29.7 16.084 29.7 15.4375C29.7 14.791 29.4392 14.171 28.9751 13.7139C28.5109 13.2568 27.8814 13 27.225 13C26.5686 13 25.9391 13.2568 25.4749 13.7139C25.0108 14.171 24.75 14.791 24.75 15.4375C24.75 16.084 25.0108 16.704 25.4749 17.1611C25.9391 17.6182 26.5686 17.875 27.225 17.875Z"
-        fill={color}
-      />
-    </svg>
+    <>
+      {chunks.map((chunk, i) => (
+        <span key={i} style={chunk.strong ? { fontWeight: 800, color: '#221B75' } : undefined}>
+          {chunk.text}
+        </span>
+      ))}
+    </>
   );
 }
+
 
 const WEEKDAYS = ['월', '화', '수', '목', '금', '토', '일'];
 
@@ -110,6 +138,21 @@ export default function Analysis() {
   // 상단 3개 카드 (지갑 온도 / 충동 지수 / BPTI)
   const scoresQuery = useScores();
   const scores = scoresQuery.data;
+
+  // 상단 3개 카드 도움말 추가
+  const [openHelp, setOpenHelp] = useState<'wallet' | 'impulse' | 'bpti' | null>(null);
+  
+  useEffect(() => {
+    if (openHelp === null) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest('[data-help-toggle]')) {
+        setOpenHelp(null);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [openHelp]);
 
   // 예산 현황 — 주간 블록은 오늘 기준, 월간 블록은 budgetMonth 기준
   // (budgetMonth가 이번 달이면 queryKey 동일 → 캐시 공유)
@@ -209,20 +252,59 @@ export default function Analysis() {
 
       <StatRow>
         <StatCard>
+          <HelpIconButton
+            type="button"
+            data-help-toggle
+            aria-label="지갑 온도 도움말"
+            onClick={() => setOpenHelp((v) => (v === 'wallet' ? null : 'wallet'))}
+          >
+            <img src={infoIcon} alt="" width={14} height={14} />
+          </HelpIconButton>
+          {openHelp === 'wallet' && (
+            <HelpBubble data-help-toggle>
+              <HelpChunks chunks={STAT_HELP_TEXT.wallet} />
+            </HelpBubble>
+          )}
           <StatLabel>지갑 온도</StatLabel>
           <IconWrap>
-            <WalletIcon color={WALLET_GAUGE_COLORS[walletLevelIndex]} />
+            <img src={WALLET_IMAGES[walletLevelIndex]} alt="" width={26} height={26} />
           </IconWrap>
           <StatValue $color={WALLET_GAUGE_COLORS[walletLevelIndex]}>
             {displayScore(scoresQuery, `${scores?.wallet_temperature.my_temp ?? ''}°C`)}
           </StatValue>
         </StatCard>
         <StatCard>
+          <HelpIconButton
+            type="button"
+            aria-label="충동 지수 도움말"
+            data-help-toggle
+            onClick={() => setOpenHelp((v) => (v === 'impulse' ? null : 'impulse'))}
+          >
+            <img src={infoIcon} alt="" width={14} height={14} />
+          </HelpIconButton>
+          {openHelp === 'impulse' && (
+            <HelpBubble>
+              <HelpChunks chunks={STAT_HELP_TEXT.impulse} />
+            </HelpBubble>
+          )}
           <StatLabel>충동 지수</StatLabel>
-          <StatIcon src={impulseIcon} alt="" width={19} height={26} />
+          <StatIcon src={impulseIcon} alt="" width={14} height={19} />
           <StatValue $color="#6A5CE6">{displayScore(scoresQuery, `${scores?.impulse_score ?? ''}점`)}</StatValue>
         </StatCard>
         <StatCard>
+          <HelpIconButton
+            type="button"
+            aria-label="BPTI 도움말"
+            data-help-toggle
+            onClick={() => setOpenHelp((v) => (v === 'bpti' ? null : 'bpti'))}
+          >
+            <img src={infoIcon} alt="" width={14} height={14} />
+          </HelpIconButton>
+          {openHelp === 'bpti' && (
+            <HelpBubble>
+              <HelpChunks chunks={STAT_HELP_TEXT.bpti} />
+            </HelpBubble>
+          )}
           <StatLabel>BPTI</StatLabel>
           {scores?.bpti?.type && BPTI_ICONS[scores.bpti.type] ? (
             <StatIcon src={BPTI_ICONS[scores.bpti.type]} alt="" width={26} height={26} />
@@ -467,6 +549,7 @@ const StatRow = styled.div`
 `;
 
 const StatCard = styled.div`
+  position: relative;
   flex: 1;
   background: #fff;
   border: 1px solid #efedf8;
@@ -474,6 +557,39 @@ const StatCard = styled.div`
   border-radius: 14px;
   padding: 14px 8px;
   text-align: center;
+`;
+
+const HelpIconButton = styled.button`
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  width: 18px;
+  height: 18px;
+  border: none;
+  background: none;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  opacity: 0.5;
+`;
+
+const HelpBubble = styled.div`
+  position: absolute;
+  top: 26px;
+  left: 4px;
+  right: 4px;
+  z-index: 10;
+  background: #ffffff;
+  border-left: 2px solid #6a5ce6;
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 10.5px;
+  line-height: 1.5;
+  color: #444;
+  text-align: left;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.12);
 `;
 
 const StatLabel = styled.div`
