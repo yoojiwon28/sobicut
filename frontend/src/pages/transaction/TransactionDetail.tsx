@@ -91,6 +91,7 @@ export default function TransactionDetail() {
     mutationFn: (body: TransactionUpdateBody) => updateTransaction(numericId, body),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['reports'] });
     },
   });
 
@@ -100,6 +101,7 @@ export default function TransactionDetail() {
     mutationFn: () => deleteTransaction(numericId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['reports'] });
       navigate(backTo);
     },
   });
@@ -177,6 +179,7 @@ export default function TransactionDetail() {
             try {
               await tagTransactionEmotions(tx.id, ids);
               queryClient.invalidateQueries({ queryKey: ['transactions'] });
+              queryClient.invalidateQueries({ queryKey: ['reports'] });
             } catch {
               setTagError(true);
               return; // 태그 저장 실패 시 이동하지 않는다
