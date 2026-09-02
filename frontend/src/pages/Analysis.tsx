@@ -11,6 +11,11 @@ import angleLeftIcon from '../assets/images/angle_left.svg';
 import impulseIcon from '../assets/images/impulse.svg';
 import cartIcon from '../assets/images/cart.svg';
 import { WALLET_GAUGE_COLORS, getWalletLevelIndex } from '../utils/wallet';
+import fireImg from '../assets/images/bpti/fire.png';
+import fogImg from '../assets/images/bpti/fog.png';
+import lazyImg from '../assets/images/bpti/lazy.png';
+import sageImg from '../assets/images/bpti/sage.png';
+import visionImg from '../assets/images/bpti/vision.png';
 
 function WalletIcon({ color }: { color: string }) {
   return (
@@ -32,6 +37,22 @@ const TIME_SLOTS: { label: string }[] = [
   { label: '저녁' },
   { label: '밤' },
 ];
+
+const BPTI_ICONS: Record<string, string> = {
+  FIRE: fireImg,
+  FOG: fogImg,
+  LAZY: lazyImg,
+  SAGE: sageImg,
+  VISION: visionImg,
+};
+
+const BPTI_COLORS: Record<string, string> = {
+  FIRE: '#FF4040',
+  FOG: '#959A99',
+  LAZY: '#938DC5',
+  SAGE: '#53B6A6',
+  VISION: '#8F8CDF',
+};
 
 // 쿼리 로딩/에러 중에는 숫자 자리에 placeholder 표시
 function displayAmount(query: { isPending: boolean; isError: boolean }, amount: number) {
@@ -203,8 +224,14 @@ export default function Analysis() {
         </StatCard>
         <StatCard>
           <StatLabel>BPTI</StatLabel>
-          <StatIcon src={cartIcon} alt="" width={26} height={26} />
-          <StatValue $color="#FF4040">{displayScore(scoresQuery, scores?.bpti?.type ?? '')}</StatValue>
+          {scores?.bpti?.type && BPTI_ICONS[scores.bpti.type] ? (
+            <StatIcon src={BPTI_ICONS[scores.bpti.type]} alt="" width={26} height={26} />
+          ) : (
+            <StatIcon src={cartIcon} alt="" width={26} height={26} />
+          )}
+          <StatValue $color={(scores?.bpti?.type && BPTI_COLORS[scores.bpti.type]) ?? '#FF4040'}>
+            {displayScore(scoresQuery, scores?.bpti?.type ?? '')}
+          </StatValue>
         </StatCard>
       </StatRow>
 
