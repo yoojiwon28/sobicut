@@ -90,11 +90,11 @@ export default function Home() {
       <GaugeZone $tint={gaugeColor} $strength={levelIndex === 0 ? '66' : '33'}>
         <ScoreHeaders>
           <ScoreHeaderItem>
-            <ScoreLabel>🌡️ 지갑 온도</ScoreLabel>
+            <ScoreLabel>지갑 온도</ScoreLabel>
             <ScoreValue>{myTemp}°C</ScoreValue>
           </ScoreHeaderItem>
           <ScoreHeaderItem $align="right">
-            <ScoreLabel>⚡ 충동 지수</ScoreLabel>
+            <ScoreLabel>충동 지수</ScoreLabel>
             <ScoreValue>{impulseScore}점</ScoreValue>
           </ScoreHeaderItem>
         </ScoreHeaders>
