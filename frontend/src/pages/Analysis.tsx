@@ -66,6 +66,17 @@ const TIME_SLOTS: { label: string }[] = [
   { label: '밤' },
 ];
 
+// 요일별 경고 라벨. 백엔드 peak_day에는 label이 없어 프론트에서 매핑한다.
+const DAY_CUT_LABELS: Record<string, string> = {
+  월: '월요병 텅진 컷',
+  화: '루틴 소비 컷',
+  수: '루틴 소비 컷',
+  목: '루틴 소비 컷',
+  금: '불금 입구 컷',
+  토: '주말 플렉스 컷',
+  일: '주말 플렉스 컷',
+};
+
 const BPTI_ICONS: Record<string, string> = {
   FIRE: fireImg,
   FOG: fogImg,
@@ -230,10 +241,15 @@ export default function Analysis() {
   const maxCell = Math.max(1, ...heatmap.flat());
 
   const insightMessage = useMemo(() => {
-    const peakTimeSlot = heatmapQuery.data?.peak_time_slot;
-    if (!peakTimeSlot?.label) return null;
-    return { highlight: peakTimeSlot.label, suffix: '이 작동 중이에요' };
-  }, [heatmapQuery.data?.peak_time_slot]);
+    const timeSlotLabel = heatmapQuery.data?.peak_time_slot?.label ?? null;
+    const peakDay = heatmapQuery.data?.peak_day?.day ?? null;
+    const dayLabel = peakDay ? (DAY_CUT_LABELS[peakDay] ?? null) : null;
+
+    const labels = [timeSlotLabel, dayLabel].filter((v): v is string => Boolean(v));
+    if (labels.length === 0) return null;
+
+    return { labelText: labels.join(' / ') };
+  }, [heatmapQuery.data]);
 
   const remainText = (remain: number) =>
     remain >= 0 ? `예산이 ${remain.toLocaleString()}원 남았어요` : `예산을 ${Math.abs(remain).toLocaleString()}원 초과했어요`;
@@ -486,8 +502,8 @@ export default function Analysis() {
           <InsightBubble>
             나의 소비 방지를 위한
             <br />
-            <InsightHighlight>{insightMessage.highlight}</InsightHighlight>
-            {insightMessage.suffix}
+            <InsightHighlight>{insightMessage.labelText}</InsightHighlight>
+            이 작동 중이에요
           </InsightBubble>
         )}
       </Card>
