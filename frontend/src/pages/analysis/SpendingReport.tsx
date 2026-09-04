@@ -36,6 +36,7 @@ const CHART_H = 190;
 const VALUE_H = 34;
 const LABEL_H = 27;
 const TRACK_H = CHART_H - VALUE_H - LABEL_H;
+const CHART_GAP = 12;
 
 
 function splitSentences(text: string): string[] {
@@ -116,6 +117,8 @@ export default function SpendingReport() {
   const lastMonthLabel = lastMonth?.label ?? '—';
   const lastMonthAmount = lastMonth?.amount ?? 0;
   const chartBars = [...forecastHistory, { label: '이번 달', amount: predictedTotal, isForecast: true }];
+  const barCount = chartBars.length;
+  const lastColumnLeftRatio = barCount > 0 ? (barCount - 1) / barCount : 0;
   const maxSpending = Math.max(0, ...chartBars.map((b) => b.amount));
   // 점선이 표시되는 경우 predictedTotal > prevMonthSpent 가 보장되므로 전월 지출선은 항상 최대 막대보다 아래.
   // clamp(0~100)는 방어용으로 유지
@@ -286,7 +289,12 @@ export default function SpendingReport() {
 
             <ChartWrap>
               {showPrevMonthLine && (
-                <PrevMonthLine style={{ bottom: `${LABEL_H + (TRACK_H * prevMonthLinePercent) / 100}px` }}>
+                <PrevMonthLine
+                  style={{
+                    bottom: `${LABEL_H + (TRACK_H * prevMonthLinePercent) / 100}px`,
+                    left: `calc((100% + ${CHART_GAP}px) * ${lastColumnLeftRatio})`,
+                  }}
+                >
                   <PrevMonthLineScissors>✂</PrevMonthLineScissors>
                 </PrevMonthLine>
               )}
@@ -557,7 +565,7 @@ const ChartWrap = styled.div`
 const ChartBars = styled.div`
   display: flex;
   align-items: flex-end;
-  gap: 12px;
+  gap: ${CHART_GAP}px;
   height: ${CHART_H}px;
 `;
 
@@ -623,7 +631,7 @@ const ChartBarLabel = styled.div`
 
 const PrevMonthLine = styled.div`
   position: absolute;
-  left: 83%;
+  /* left 는 막대 개수에 따라 인라인 스타일로 계산해서 주입 */
   right: 0;
   border-top: 1px dashed #999;
   z-index: 1;
