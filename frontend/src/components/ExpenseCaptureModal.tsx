@@ -360,7 +360,7 @@ export default function ExpenseCaptureModal({ rawText, onClose }: ExpenseCapture
 
           <CategoryBadgeWrap>
             {categoryMissing ? (
-              <FeedbackText>카테고리를 선택해주세요</FeedbackText>
+              <FeedbackText>카테고리를 못 찾았어요. '수정하기'에서 선택해주세요.</FeedbackText>
             ) : (
               <CategoryBadge>{category}로 자동 분류</CategoryBadge>
             )}
