@@ -49,6 +49,11 @@ export default function CalendarPage() {
 
   const selectedTotals = dailyMap[selectedKey];
 
+  const monthlyExpenseTotal = useMemo(
+    () => dailyReport.reduce((sum, row) => sum + row.expense, 0),
+    [dailyReport],
+  );
+
   return (
     <Page>
       <Header>
@@ -57,6 +62,12 @@ export default function CalendarPage() {
           +
         </AddButton>
       </Header>
+
+      <MonthSummary>
+        <MonthSummaryLabel>
+          {month}월 총 지출 - {monthlyExpenseTotal.toLocaleString()}원
+        </MonthSummaryLabel>
+      </MonthSummary>
 
       <CalendarCard>
         <StyledCalendar
@@ -191,6 +202,15 @@ const AddButton = styled.button`
   &:active {
     transform: scale(0.94);
   }
+`;
+
+const MonthSummary = styled.div`
+  padding: 2px 6px 14px;
+`;
+
+const MonthSummaryLabel = styled.span`
+  font-size: 15px;
+  font-weight: 700;
 `;
 
 const CalendarCard = styled.div`
