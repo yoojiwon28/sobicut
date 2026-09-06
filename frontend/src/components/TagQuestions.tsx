@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import styled from 'styled-components';
 
 // 태그 식별자는 백엔드 emotion_tags 의 한글 name 문자열을 그대로 쓴다.
@@ -13,23 +14,46 @@ export const TAG_LABEL: Record<string, string> = {
   장기적가치: '오래 쓸 소비',
 };
 
+const CUSTOM_TAG_MAX_LENGTH = 15;
+
 type TagQuestionsProps = {
   title: string;
   planTag: string | null;
   contextTags: string[];
+  customTags: string[];
   planOptionCopy: Record<string, string>;
   onChangePlanTag: (name: string) => void;
   onToggleContextTag: (name: string) => void;
+  onChangeCustomTags: (tags: string[]) => void;
 };
 
 export default function TagQuestions({
   title,
   planTag,
   contextTags,
+  customTags,
   planOptionCopy,
   onChangePlanTag,
   onToggleContextTag,
+  onChangeCustomTags,
 }: TagQuestionsProps) {
+  const [showCustomInput, setShowCustomInput] = useState(false);
+  const [customTagDraft, setCustomTagDraft] = useState('');
+
+  const addCustomTag = () => {
+    const value = customTagDraft.trim();
+    if (!value || customTags.includes(value)) {
+      setCustomTagDraft('');
+      return;
+    }
+    onChangeCustomTags([...customTags, value]);
+    setCustomTagDraft('');
+  };
+
+  const removeCustomTag = (tag: string) => {
+    onChangeCustomTags(customTags.filter((t) => t !== tag));
+  };
+
   return (
     <>
       <TagTitle>{title}</TagTitle>
@@ -78,7 +102,60 @@ export default function TagQuestions({
               </ContextChip>
             );
           })}
+
+          {customTags.map((tag) => (
+            <ContextChip
+              key={tag}
+              type="button"
+              $active
+              onClick={() => removeCustomTag(tag)}
+              aria-label={`${tag} 태그 삭제`}
+            >
+              {tag}
+              <CustomTagRemoveMark>×</CustomTagRemoveMark>
+            </ContextChip>
+          ))}
+
+          <AddCustomTagButton
+            type="button"
+            $active={showCustomInput}
+            onClick={() => setShowCustomInput((v) => !v)}
+            aria-label="나만의 태그 추가"
+          >
+            +
+          </AddCustomTagButton>
         </ContextChipList>
+
+        {showCustomInput && (
+          <CustomTagBox>
+            <QuestionLabelRow>
+              <QuestionLabelText>나만의 태그</QuestionLabelText>
+              <MultiSelectHint>기록용 태그를 추가할 수 있어요</MultiSelectHint>
+            </QuestionLabelRow>
+            <CustomTagInputRow>
+              <CustomTagInput
+                autoFocus
+                value={customTagDraft}
+                onChange={(e) => setCustomTagDraft(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    addCustomTag();
+                  }
+                }}
+                placeholder="나만의 태그를 입력해주세요"
+                maxLength={CUSTOM_TAG_MAX_LENGTH}
+              />
+              <CustomTagConfirmButton
+                type="button"
+                onClick={addCustomTag}
+                disabled={!customTagDraft.trim()}
+              >
+                추가
+              </CustomTagConfirmButton>
+            </CustomTagInputRow>
+          </CustomTagBox>
+        )}
       </QuestionDivider>
     </>
   );
@@ -164,4 +241,70 @@ const CheckIcon = styled.svg`
   width: 12px;
   height: 12px;
   margin-right: 3px;
+`;
+
+const CustomTagRemoveMark = styled.span`
+  margin-left: 4px;
+  font-size: 13px;
+  line-height: 1;
+`;
+
+const AddCustomTagButton = styled.button<{ $active: boolean }>`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  padding: 7px 0;
+  border-radius: 999px;
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+  border: 1px dashed ${({ $active }) => ($active ? '#6A5CE6' : '#C7C1F5')};
+  background: ${({ $active }) => ($active ? '#E2DEFF' : '#FFFFFF')};
+  color: #6a5ce6;
+`;
+
+const CustomTagBox = styled.div`
+  margin-top: 10px;
+`;
+
+const CustomTagInputRow = styled.div`
+  display: flex;
+  gap: 6px;
+`;
+
+const CustomTagInput = styled.input`
+  flex: 1;
+  min-width: 0;
+  height: 38px;
+  border: 1px solid #e5e5e5;
+  border-radius: 8px;
+  padding: 0 12px;
+  font-size: 13px;
+  font-family: inherit;
+  box-sizing: border-box;
+  outline: none;
+
+  &:focus {
+    border-color: #6a5ce6;
+  }
+`;
+
+const CustomTagConfirmButton = styled.button`
+  flex-shrink: 0;
+  padding: 0 14px;
+  height: 38px;
+  border: none;
+  border-radius: 8px;
+  background: #6a5ce6;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+
+  &:disabled {
+    background: #e0e0e0;
+    color: #999;
+    cursor: not-allowed;
+  }
 `;

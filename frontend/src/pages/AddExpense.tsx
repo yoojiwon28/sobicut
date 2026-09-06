@@ -24,7 +24,7 @@ import {
   LinkButton,
 } from '../styles/field.styles';
 import { CATEGORY_OPTIONS, CATEGORY_ICONS } from '../utils/category';
-import { parseCardMessage, createTransaction, tagTransactionEmotions } from '../api/transactions';
+import { parseCardMessage, createTransaction, tagTransactionEmotions, setTransactionTags } from '../api/transactions';
 import { getEmotions } from '../api/emotions';
 import { ApiError } from '../api/client';
 import editIcon from '../assets/images/edit_icon.svg';
@@ -57,6 +57,7 @@ export default function AddExpense() {
   const [importError, setImportError] = useState('');
   const [showMemo, setShowMemo] = useState(false);
   const [memo, setMemo] = useState('');
+  const [customTags, setCustomTags] = useState<string[]>([]);
 
   const { data: emotions = [] } = useQuery({
     queryKey: ['emotions'],
@@ -130,6 +131,10 @@ export default function AddExpense() {
       if (emotionTagIds.length > 0) {
         await tagTransactionEmotions(id, emotionTagIds);
       }
+      if (customTags.length > 0) {
+        await setTransactionTags(id, customTags);
+      }
+      
 
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
       queryClient.invalidateQueries({ queryKey: ['reports'] });
@@ -208,24 +213,27 @@ export default function AddExpense() {
           <FieldGroup>
             <FieldLabel>소비 태그</FieldLabel>
             {planTag ? (
-              <TagBox type="button" onClick={() => setTagSheetOpen(true)}>
+                <TagBox type="button" onClick={() => setTagSheetOpen(true)}>
                 <TagChipList>
-                  <TagChip>{TAG_LABEL[planTag]}</TagChip>
-                  {CONTEXT_TAG_NAMES.filter((name) => contextTags.includes(name)).map((name) => (
+                    <TagChip>{TAG_LABEL[planTag]}</TagChip>
+                    {CONTEXT_TAG_NAMES.filter((name) => contextTags.includes(name)).map((name) => (
                     <TagChip key={name}>{TAG_LABEL[name]}</TagChip>
-                  ))}
+                    ))}
+                    {customTags.map((tag) => (
+                    <TagChip key={tag}>{tag}</TagChip>
+                    ))}
                 </TagChipList>
                 <TagEditIcon src={editIcon} alt="" />
-              </TagBox>
+                </TagBox>
             ) : (
-              <TagEmptyBox type="button" onClick={() => setTagSheetOpen(true)}>
+                <TagEmptyBox type="button" onClick={() => setTagSheetOpen(true)}>
                 <TagEmptyText>이 소비, 어떤 소비였나요?</TagEmptyText>
                 <PlusIcon viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M8 3v10M3 8h10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                    <path d="M8 3v10M3 8h10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
                 </PlusIcon>
-              </TagEmptyBox>
+                </TagEmptyBox>
             )}
-          </FieldGroup>
+            </FieldGroup>
 
           {showMemo ? (
             <FieldGroup>
@@ -252,16 +260,18 @@ export default function AddExpense() {
 
       {tagSheetOpen && (
         <TagEditSheet
-          initialPlanTag={planTag}
-          initialContextTags={contextTags}
-          onClose={() => setTagSheetOpen(false)}
-          onSave={(nextPlanTag, nextContextTags) => {
+            initialPlanTag={planTag}
+            initialContextTags={contextTags}
+            initialCustomTags={customTags}
+            onClose={() => setTagSheetOpen(false)}
+            onSave={(nextPlanTag, nextContextTags, nextCustomTags) => {
             setPlanTag(nextPlanTag);
             setContextTags(nextContextTags);
+            setCustomTags(nextCustomTags);
             setTagSheetOpen(false);
-          }}
+            }}
         />
-      )}
+        )}
     </form>
   );
 }
@@ -269,13 +279,21 @@ export default function AddExpense() {
 type TagEditSheetProps = {
   initialPlanTag: string | null;
   initialContextTags: string[];
+  initialCustomTags: string[];
   onClose: () => void;
-  onSave: (planTag: string | null, contextTags: string[]) => void;
+  onSave: (planTag: string | null, contextTags: string[], customTags: string[]) => void;
 };
 
-function TagEditSheet({ initialPlanTag, initialContextTags, onClose, onSave }: TagEditSheetProps) {
+function TagEditSheet({
+  initialPlanTag,
+  initialContextTags,
+  initialCustomTags,
+  onClose,
+  onSave,
+}: TagEditSheetProps) {
   const [planTag, setPlanTag] = useState(initialPlanTag);
   const [contextTags, setContextTags] = useState(initialContextTags);
+  const [customTags, setCustomTags] = useState(initialCustomTags);
 
   const toggleContextTag = (tag: string) => {
     setContextTags((prev) => (prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]));
@@ -287,11 +305,17 @@ function TagEditSheet({ initialPlanTag, initialContextTags, onClose, onSave }: T
         title="이 소비, 어떤 소비였나요?"
         planTag={planTag}
         contextTags={contextTags}
+        customTags={customTags}
         planOptionCopy={PLAN_OPTION_COPY}
         onChangePlanTag={setPlanTag}
         onToggleContextTag={toggleContextTag}
+        onChangeCustomTags={setCustomTags}
       />
-      <TagSaveButton type="button" disabled={planTag === null} onClick={() => onSave(planTag, contextTags)}>
+      <TagSaveButton
+        type="button"
+        disabled={planTag === null}
+        onClick={() => onSave(planTag, contextTags, customTags)}
+      >
         저장
       </TagSaveButton>
     </BottomSheet>
