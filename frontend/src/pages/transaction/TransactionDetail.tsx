@@ -11,7 +11,7 @@ import { FieldGroup, FieldLabel, OutlinedInput, OutlinedSelect, OutlinedTextarea
 import { useTransaction } from '../../hooks/useTransactions';
 import { useEmotions } from '../../hooks/useEmotions';
 import Modal from '../../components/Modal';
-import { updateTransaction, deleteTransaction, tagTransactionEmotions, type TransactionUpdateBody } from '../../api/transactions';
+import { updateTransaction, deleteTransaction, tagTransactionEmotions, setTransactionTags, type TransactionUpdateBody } from '../../api/transactions';
 import { ApiError } from '../../api/client';
 import { toDateKey } from '../../utils/date';
 import { CATEGORY_ICONS, CATEGORY_OPTIONS } from '../../utils/category';
@@ -56,6 +56,7 @@ export default function TransactionDetail() {
   const [tagSheetOpen, setTagSheetOpen] = useState(false);
   const [tagError, setTagError] = useState(false);
   const [tagSaving, setTagSaving] = useState(false);
+  const [customTags, setCustomTags] = useState<string[]>([]);
 
   // emotion_tags(백엔드 표준 필드)에서 계획성/소비특성 태그를 name 기준으로 분리한다.
   const { initialPlanTag, initialContextTags } = useMemo(() => {
@@ -85,6 +86,7 @@ export default function TransactionDetail() {
     setTime(tx.transaction_time ?? '');
     setPlanTag(initialPlanTag);
     setContextTags(initialContextTags);
+    setCustomTags(tx.tags ?? []);
   }, [tx, initialPlanTag, initialContextTags]);
 
   const mutation = useMutation({
@@ -132,8 +134,13 @@ export default function TransactionDetail() {
       ? '/expenses/today'
       : `/day/${tx.transaction_date}`;
 
-  const tagsChanged =
+  const initialCustomTags = tx.tags ?? [];
+
+  const emotionTagsChanged =
     planTag !== initialPlanTag || !isSameTagSet(contextTags, initialContextTags);
+  const customTagsChanged = !isSameTagSet(customTags, initialCustomTags);
+  const tagsChanged = emotionTagsChanged || customTagsChanged;
+      
 
   const numericAmount = Number(amount);
   const isAmountValid = amount.length > 0 && Number.isFinite(numericAmount) && numericAmount > 0;
@@ -169,15 +176,20 @@ export default function TransactionDetail() {
       },
       {
         onSuccess: async () => {
-          // 태그는 PUT body 밖. 변경됐을 때만 교체형 엔드포인트로 별도 저장한다.
-          if (tagsChanged) {
-            const ids = [planTag, ...contextTags]
-              .filter((name): name is string => name !== null)
-              .map((name) => emotionIdByName.get(name))
-              .filter((id): id is number => id !== undefined);
+          // 태그는 PUT body 밖. 변경됐을 때만 각각의 교체형 엔드포인트로 별도 저장한다.
+          if (emotionTagsChanged || customTagsChanged) {
             setTagSaving(true);
             try {
-              await tagTransactionEmotions(tx.id, ids);
+              if (emotionTagsChanged) {
+                const ids = [planTag, ...contextTags]
+                  .filter((name): name is string => name !== null)
+                  .map((name) => emotionIdByName.get(name))
+                  .filter((id): id is number => id !== undefined);
+                await tagTransactionEmotions(tx.id, ids);
+              }
+              if (customTagsChanged) {
+                await setTransactionTags(tx.id, customTags);
+              }
               queryClient.invalidateQueries({ queryKey: ['transactions'] });
               queryClient.invalidateQueries({ queryKey: ['reports'] });
             } catch {
@@ -269,6 +281,9 @@ export default function TransactionDetail() {
                 {CONTEXT_TAG_NAMES.filter((name) => contextTags.includes(name)).map((name) => (
                   <TagChip key={name}>{TAG_LABEL[name]}</TagChip>
                 ))}
+                {customTags.map((tag) => (
+                  <TagChip key={tag}>{tag}</TagChip>
+                ))}
               </TagChipList>
               <TagEditIcon src={editIcon} alt="" />
             </TagBox>
@@ -316,10 +331,12 @@ export default function TransactionDetail() {
         <TagEditSheet
           initialPlanTag={planTag}
           initialContextTags={contextTags}
+          initialCustomTags={customTags}
           onClose={() => setTagSheetOpen(false)}
-          onSave={(nextPlanTag, nextContextTags) => {
+          onSave={(nextPlanTag, nextContextTags, nextCustomTags) => {
             setPlanTag(nextPlanTag);
             setContextTags(nextContextTags);
+            setCustomTags(nextCustomTags);
             setTagSheetOpen(false);
           }}
         />
@@ -354,13 +371,21 @@ export default function TransactionDetail() {
 type TagEditSheetProps = {
   initialPlanTag: string | null;
   initialContextTags: string[];
+  initialCustomTags: string[];
   onClose: () => void;
-  onSave: (planTag: string | null, contextTags: string[]) => void;
+  onSave: (planTag: string | null, contextTags: string[], customTags: string[]) => void;
 };
 
-function TagEditSheet({ initialPlanTag, initialContextTags, onClose, onSave }: TagEditSheetProps) {
+function TagEditSheet({
+  initialPlanTag,
+  initialContextTags,
+  initialCustomTags,
+  onClose,
+  onSave,
+}: TagEditSheetProps) {
   const [planTag, setPlanTag] = useState(initialPlanTag);
   const [contextTags, setContextTags] = useState(initialContextTags);
+  const [customTags, setCustomTags] = useState(initialCustomTags);
 
   const toggleContextTag = (tag: string) => {
     setContextTags((prev) => (prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]));
@@ -368,7 +393,7 @@ function TagEditSheet({ initialPlanTag, initialContextTags, onClose, onSave }: T
 
   // 시트 저장은 부모 state 반영만 한다. 서버 저장은 '수정 완료'에서 처리.
   const handleSave = () => {
-    onSave(planTag, contextTags);
+    onSave(planTag, contextTags, customTags);
   };
 
   return (
@@ -377,9 +402,11 @@ function TagEditSheet({ initialPlanTag, initialContextTags, onClose, onSave }: T
         title="이 소비, 어떤 소비였나요?"
         planTag={planTag}
         contextTags={contextTags}
+        customTags={customTags}
         planOptionCopy={PLAN_OPTION_COPY}
         onChangePlanTag={setPlanTag}
         onToggleContextTag={toggleContextTag}
+        onChangeCustomTags={setCustomTags}
       />
       <TagSaveButton type="button" disabled={planTag === null} onClick={handleSave}>
         저장

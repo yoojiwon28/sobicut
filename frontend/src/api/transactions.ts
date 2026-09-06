@@ -73,3 +73,10 @@ export function tagTransactionEmotions(transactionId: number, emotionTagIds: num
 export function deleteTransaction(id: number) {
   return apiFetch<{ message: string }>(`/transactions/${id}`, { method: 'DELETE' });
 }
+
+export function setTransactionTags(transactionId: number, tags: string[]) {
+  return apiFetch<{ message: string }>(`/transactions/${transactionId}/tags`, {
+    method: 'POST',
+    body: JSON.stringify({ tags }),
+  });
+}

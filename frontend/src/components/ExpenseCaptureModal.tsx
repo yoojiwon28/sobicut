@@ -11,6 +11,7 @@ import { useEmotions } from '../hooks/useEmotions';
 import { ApiError } from '../api/client';
 import { formatSlashDateTime } from '../utils/date';
 import angleRightIcon from '../assets/images/angle_right.svg';
+import { setTransactionTags } from '../api/transactions';
 
 // Q1 버튼 전용 카피(질문-답변 프레이밍). 태그 표현과 무관한 UI 문구라 TAG_LABEL과 분리한다.
 const PLAN_OPTION_COPY: Record<string, string> = {
@@ -63,6 +64,7 @@ export default function ExpenseCaptureModal({ rawText, onClose }: ExpenseCapture
   const [submitError, setSubmitError] = useState('');
   const [planTag, setPlanTag] = useState<string | null>(null);
   const [contextTags, setContextTags] = useState<string[]>([]);
+  const [customTags, setCustomTags] = useState<string[]>([]);
 
   // 모달이 열릴 때 클립보드 문자를 읽어 파싱한다. 최초 1회만.
   useEffect(() => {
@@ -149,7 +151,16 @@ export default function ExpenseCaptureModal({ rawText, onClose }: ExpenseCapture
         emotionTagIds,
       },
       {
-        onSuccess: () => setStep('result'),
+        onSuccess: async (id) => {
+          if (customTags.length > 0) {
+            try {
+              await setTransactionTags(id, customTags);
+            } catch {
+              // 커스텀 태그 저장 실패는 기록 자체를 막지 않는다(기록용 부가 정보).
+            }
+          }
+          setStep('result');
+        },
         onError: (err) =>
           setSubmitError(
             err instanceof ApiError ? err.message : '기록에 실패했어요. 다시 시도해주세요.',
@@ -225,9 +236,11 @@ export default function ExpenseCaptureModal({ rawText, onClose }: ExpenseCapture
             title="이 소비, 어떤 소비였나요?"
             planTag={planTag}
             contextTags={contextTags}
+            customTags={customTags}
             planOptionCopy={PLAN_OPTION_COPY}
             onChangePlanTag={setPlanTag}
             onToggleContextTag={toggleContextTag}
+            onChangeCustomTags={setCustomTags}
           />
 
           {submitError && <FeedbackText>{submitError}</FeedbackText>}
