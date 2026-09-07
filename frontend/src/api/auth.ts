@@ -48,3 +48,24 @@ export function withdraw(password: string) {
     body: JSON.stringify({ password }),
   });
 }
+
+//kakaologin
+export type KakaoLoginPayload = {
+  access_token: string;
+  nickname?: string;
+  residence_type?: string;
+  income_level?: string;
+};
+
+export type KakaoLoginResponse = {
+  access_token: string;
+  token_type: string;
+  is_new_user: boolean;
+};
+
+export function loginWithKakao(payload: KakaoLoginPayload) {
+  return apiFetch<KakaoLoginResponse>('/auth/kakao', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
