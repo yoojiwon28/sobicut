@@ -33,6 +33,8 @@ import DayTransactions from './pages/DayTransactions';
 import TransactionDetail from './pages/transaction/TransactionDetail';
 import SatisfactionSurvey from './pages/satisfaction/SatisfactionSurvey';
 import SatisfactionResult from './pages/satisfaction/SatisfactionResult';
+import KakaoProfile from './pages/auth/KakaoProfile';
+
 
 export default function App() {
     const { isLoggedIn } = useAuth();
@@ -43,6 +45,7 @@ export default function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/register-profile" element={<RegisterProfile />} />
+        <Route path="/register-profile/kakao" element={<KakaoProfile />} />
         <Route path="/find-password" element={<FindPassword />} />
       </Route>
 
