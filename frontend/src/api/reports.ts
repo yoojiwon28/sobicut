@@ -8,6 +8,7 @@ import type {
   BudgetStatus,
   CategoryReport,
   HeatmapReport,
+  PrescriptionReport,
 } from '../types/report';
 
 export type DailyReportItem = {
@@ -27,6 +28,11 @@ export function getDailyReport(params: { year: number; month: number }) {
 // 충동 지수 리포트
 export function getImpulseReport() {
   return apiFetch<ImpulseReport>('/reports/impulse');
+}
+
+// 주간 처방전 리포트 — week_start 미지정 시 서버가 지난주 월요일을 기본값으로 사용
+export function getPrescriptionReport() {
+  return apiFetch<PrescriptionReport>('/reports/prescription');
 }
 
 // 소비성격유형(BPTI) 리포트
