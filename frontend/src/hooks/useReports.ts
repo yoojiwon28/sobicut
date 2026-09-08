@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import {
   getImpulseReport,
+  getPrescriptionReport,
   getBptiReport,
   getWalletTemperature,
   getMonthlyForecast,
@@ -16,6 +17,14 @@ export function useImpulseReport() {
   return useQuery({
     queryKey: ['reports', 'impulse'],
     queryFn: getImpulseReport,
+    staleTime: STALE_TIME,
+  });
+}
+
+export function usePrescriptionReport() {
+  return useQuery({
+    queryKey: ['reports', 'prescription'],
+    queryFn: getPrescriptionReport,
     staleTime: STALE_TIME,
   });
 }

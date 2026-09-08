@@ -115,6 +115,18 @@ export type HeatmapReport = {
   peak_time_slot: { time_slot: string; label: string } | null;
 };
 
+// GET /reports/prescription (week_start optional, YYYY-MM-DD 월요일 — 생략 시 서버가 지난주 월요일 사용)
+// 주의: prescription 은 배치 미수행 / 해당 주 거래 없음이면 null (에러 아님).
+//       negative_factors / positive_factors 는 빈 배열일 수 있고, prescription 과 독립적이다.
+export type PrescriptionReport = {
+  period_start: string; // 'YYYY-MM-DD'
+  period_end: string; // 'YYYY-MM-DD'
+  negative_factors: string[];
+  positive_factors: string[];
+  prescription: string[] | null;
+  generated_at: string | null;
+};
+
 // GET /reports/budget-status (year/month optional — 없으면 이번 달)
 export type BudgetStatus = {
   monthly: {
