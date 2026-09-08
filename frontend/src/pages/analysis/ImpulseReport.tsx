@@ -1,6 +1,6 @@
 import styled from 'styled-components';
 import BackButton from '../../components/BackButton';
-import ScoreBar from '../../components/ScoreBar';
+import ScoreBar, { EDGE_PADDING } from '../../components/ScoreBar';
 import { PageWrap } from '../../styles/auth.styles';
 import { useImpulseReport, usePrescriptionReport } from '../../hooks/useReports';
 import { getImpulseGaugeColor } from '../../utils/impulse';
@@ -120,6 +120,8 @@ const Headline = styled.h1`
   font-weight: 500;
   line-height: 1.4;
   margin: 4px 0 6px;
+  /* 아래 게이지 바(ScoreBar)의 좌측 시작선과 맞추기 위해 동일한 여백 사용 */
+  padding-left: ${EDGE_PADDING}px;
 
   strong {
     font-size: 34px;

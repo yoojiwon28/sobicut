@@ -11,7 +11,7 @@ type ScoreBarProps = {
 
 // 게이지 바가 카드 가장자리에 붙지 않도록 좌우로 확보하는 여백.
 // 마커/라벨의 0~100% 위치 계산도 이 안쪽 영역(Inner) 기준으로 맞춘다.
-const EDGE_PADDING = 24;
+export const EDGE_PADDING = 24;
 
 export default function ScoreBar({
   value,
