@@ -17,7 +17,7 @@ export function getTransaction(id: number) {
   return apiFetch<Transaction>(`/transactions/${id}`);
 }
 
-// POST /transactions/parse — 실패 시 400 + { detail } → ApiError 로 던져진다.
+// POST /transactions/parse — 실패 시 422 + { detail } → ApiError 로 던져진다.
 export function parseCardMessage(messageText: string) {
   return apiFetch<ParseResult>('/transactions/parse', {
     method: 'POST',
