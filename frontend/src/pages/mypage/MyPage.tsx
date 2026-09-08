@@ -15,6 +15,7 @@ import cuttyLv5 from '../../assets/images/character/cutty_lv5_knight.svg';
 import cuttyLv6 from '../../assets/images/character/cutty_lv6_god.svg';
 import { getLevel, getSettings } from '../../api/users';
 import { PageSpinnerWrap, Spinner } from '../../styles/auth.styles';
+import kakaoLogo from '../../assets/images/kakaologo.svg';
 
 const CHARACTER_IMAGES: Record<number, string> = {
   0: cuttyLv0,
@@ -59,7 +60,14 @@ export default function MyPage() {
     <PageWrap>
       <Header>
         <UserName>{settings.nickname}</UserName>
-        <UserCode>{settings.email}</UserCode>
+        <UserCode>
+            {settings.is_kakao_account && (
+            <KakaoBadge aria-label="카카오 계정으로 로그인">
+                <img src={kakaoLogo} alt="" width={9} height={9} />
+            </KakaoBadge>
+            )}
+            {settings.email}
+        </UserCode>
       </Header>
       <Divider />
 
@@ -130,6 +138,18 @@ const UserCode = styled.div`
   font-size: 13px;
   color: #888;
   margin-top: 4px;
+`;
+
+const KakaoBadge = styled.span`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #fee500;
+  margin-right: 6px;
+  vertical-align: middle;
 `;
 
 const Divider = styled.hr`

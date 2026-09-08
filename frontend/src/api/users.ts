@@ -13,7 +13,9 @@ export type UserSettings = {
   nickname: string;
   residence_type: string;
   income_level: string;
+  is_kakao_account: boolean;
 };
+
 
 export function getLevel() {
   return apiFetch<UserLevel>('/users/me/level');
