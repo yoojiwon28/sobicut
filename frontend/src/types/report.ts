@@ -13,6 +13,8 @@ export type ImpulseReport = {
     regret_score: number;
   };
   emotion_breakdown: Record<string, number>;
+  // 이번 달 전체 지출 거래 수 대비 "해당 태그가 붙은 거래" 비율(0~1). 태그별 독립 계산이라 합이 1을 넘을 수 있다.
+  emotion_expense_ratio: Record<string, number>;
   peer_avg_impulse_score: number | null;
   week_over_week: { this_week: number; last_week: number; diff: number };
   top_impulse_transactions: {
