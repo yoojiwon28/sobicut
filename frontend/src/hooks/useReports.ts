@@ -13,11 +13,12 @@ import {
 
 const STALE_TIME = 60 * 1000; // 60초
 
-export function useImpulseReport() {
+export function useImpulseReport(options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: ['reports', 'impulse'],
     queryFn: getImpulseReport,
     staleTime: STALE_TIME,
+    enabled: options?.enabled ?? true,
   });
 }
 

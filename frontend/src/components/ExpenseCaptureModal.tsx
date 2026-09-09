@@ -8,6 +8,7 @@ import { Spinner } from '../styles/auth.styles';
 import { CATEGORY_NAMES } from '../constants/categories';
 import { useCreateExpense, useParseCardMessage } from '../hooks/useTransactions';
 import { useEmotions } from '../hooks/useEmotions';
+import { useImpulseReport } from '../hooks/useReports';
 import { ApiError } from '../api/client';
 import { formatSlashDateTime } from '../utils/date';
 import angleRightIcon from '../assets/images/angle_right.svg';
@@ -17,11 +18,6 @@ import { setTransactionTags } from '../api/transactions';
 const PLAN_OPTION_COPY: Record<string, string> = {
   즉흥성: '아니요\n바로 샀어요',
   충분한숙고: '네\n고민하고 샀어요',
-};
-
-const MOCK_PATTERN: { planning: Record<string, number>; context: Record<string, number> } = {
-  planning: { 즉흥성: 70, 충분한숙고: 30 },
-  context: { 스트레스: 54, 비교회피: 40, 장기적가치: 11 },
 };
 
 type Step = 'confirm' | 'edit' | 'emotion' | 'result';
@@ -65,6 +61,9 @@ export default function ExpenseCaptureModal({ rawText, onClose }: ExpenseCapture
   const [planTag, setPlanTag] = useState<string | null>(null);
   const [contextTags, setContextTags] = useState<string[]>([]);
   const [customTags, setCustomTags] = useState<string[]>([]);
+
+  // 마지막 스텝(소비 그래프)에서만 호출한다. 다른 스텝에서는 disabled → 네트워크 요청 없음.
+  const patternQuery = useImpulseReport({ enabled: step === 'result' });
 
   // 모달이 열릴 때 클립보드 문자를 읽어 파싱한다. 최초 1회만.
   useEffect(() => {
@@ -170,50 +169,91 @@ export default function ExpenseCaptureModal({ rawText, onClose }: ExpenseCapture
   };
 
   if (step === 'result') {
+    // 태그명(문자열) 키로만 접근한다. 응답에 없는 키는 0. CONTEXT_TAG_NAMES 외 태그가 늘어도 무시될 뿐 깨지지 않는다.
+    const ratio = patternQuery.data?.emotion_expense_ratio ?? {};
+    const toPercent = (name: string) => Math.round((ratio[name] ?? 0) * 100);
+
+    // 계획성 도넛: 즉흥성 / 충분한숙고 두 값만 뽑아 둘의 합으로 재정규화한다(중복 집계 배제).
+    const impulsiveRaw = ratio[PLAN_TAG_NAMES[0]] ?? 0;
+    const deliberateRaw = ratio[PLAN_TAG_NAMES[1]] ?? 0;
+    const planningTotal = impulsiveRaw + deliberateRaw;
+    const impulsivePercent =
+      planningTotal > 0 ? Math.round((impulsiveRaw / planningTotal) * 100) : 0;
+    const deliberatePercent = 100 - impulsivePercent; // 반올림 합이 정확히 100이 되도록 나머지로 계산
+    const planningPercents = [impulsivePercent, deliberatePercent];
+
     return (
       <Modal onClose={onClose}>
         <PatternTitle>이번 달 소비 패턴</PatternTitle>
 
-        <PlanningSection>
-          <PlanningDonut
-            segments={[
-              { percent: MOCK_PATTERN.planning[PLAN_TAG_NAMES[0]], color: '#6A5CE6' },
-              { percent: MOCK_PATTERN.planning[PLAN_TAG_NAMES[1]], color: '#C7C1F5' },
-            ]}
-          />
-          <PlanningLegend>
-            <SectionLabel>계획성</SectionLabel>
-            <LegendRows>
-              {PLAN_TAG_NAMES.map((name, index) => (
-                <LegendRow key={name}>
-                  <LegendDot $color={index === 0 ? '#6A5CE6' : '#C7C1F5'} />
-                  <LegendLabel>{TAG_LABEL[name]}</LegendLabel>
-                  <LegendPercent>{MOCK_PATTERN.planning[name]}%</LegendPercent>
-                </LegendRow>
-              ))}
-            </LegendRows>
-          </PlanningLegend>
-        </PlanningSection>
+        {patternQuery.isLoading ? (
+          <PatternSkeleton aria-hidden>
+            <SkeletonPlanningRow>
+              <SkeletonDonut />
+              <SkeletonLines>
+                <SkeletonLine />
+                <SkeletonLine />
+              </SkeletonLines>
+            </SkeletonPlanningRow>
+            <SkeletonBars>
+              <SkeletonBar />
+              <SkeletonBar />
+              <SkeletonBar />
+            </SkeletonBars>
+          </PatternSkeleton>
+        ) : patternQuery.isError ? (
+          <PatternFallback>소비 패턴을 불러오지 못했어요</PatternFallback>
+        ) : (
+          <>
+            {planningTotal > 0 ? (
+              <PlanningSection>
+                <PlanningDonut
+                  segments={[
+                    { percent: impulsivePercent, color: '#6A5CE6' },
+                    { percent: deliberatePercent, color: '#C7C1F5' },
+                  ]}
+                />
+                <PlanningLegend>
+                  <SectionLabel>계획성</SectionLabel>
+                  <LegendRows>
+                    {PLAN_TAG_NAMES.map((name, index) => (
+                      <LegendRow key={name}>
+                        <LegendDot $color={index === 0 ? '#6A5CE6' : '#C7C1F5'} />
+                        <LegendLabel>{TAG_LABEL[name]}</LegendLabel>
+                        <LegendPercent>{planningPercents[index]}%</LegendPercent>
+                      </LegendRow>
+                    ))}
+                  </LegendRows>
+                </PlanningLegend>
+              </PlanningSection>
+            ) : (
+              <PatternFallback>아직 기록된 소비가 없어요</PatternFallback>
+            )}
 
-        <ContextSection>
-          <ContextSectionLabelRow>
-            <SectionLabel>소비 특성</SectionLabel>
-            <ContextCaption>(중복 집계)</ContextCaption>
-          </ContextSectionLabelRow>
-          <BarList>
-            {CONTEXT_TAG_NAMES.map((name) => (
-              <BarItem key={name}>
-                <BarHeader>
-                  <BarLabel>{TAG_LABEL[name]}</BarLabel>
-                  <BarPercent>{MOCK_PATTERN.context[name]}%</BarPercent>
-                </BarHeader>
-                <BarTrack>
-                  <BarFill $percent={MOCK_PATTERN.context[name]} />
-                </BarTrack>
-              </BarItem>
-            ))}
-          </BarList>
-        </ContextSection>
+            <ContextSection>
+              <ContextSectionLabelRow>
+                <SectionLabel>소비 특성</SectionLabel>
+                <ContextCaption>(중복 집계)</ContextCaption>
+              </ContextSectionLabelRow>
+              <BarList>
+                {CONTEXT_TAG_NAMES.map((name) => {
+                  const percent = toPercent(name);
+                  return (
+                    <BarItem key={name}>
+                      <BarHeader>
+                        <BarLabel>{TAG_LABEL[name]}</BarLabel>
+                        <BarPercent>{percent}%</BarPercent>
+                      </BarHeader>
+                      <BarTrack>
+                        <BarFill $percent={percent} />
+                      </BarTrack>
+                    </BarItem>
+                  );
+                })}
+              </BarList>
+            </ContextSection>
+          </>
+        )}
 
         <ReportLink
           type="button"
@@ -805,9 +845,64 @@ const BarTrack = styled.div`
 
 const BarFill = styled.div<{ $percent: number }>`
   height: 100%;
-  width: ${({ $percent }) => $percent}%;
+  width: ${({ $percent }) => Math.min(100, Math.max(0, $percent))}%;
   border-radius: 999px;
   background: #6a5ce6;
+`;
+
+// 로딩 중 자리표시. 실제 그래프(도넛 88px + 범례, 막대 3줄)와 비슷한 높이를 잡아 레이아웃이 튀지 않게 한다.
+const PatternSkeleton = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+`;
+
+const SkeletonPlanningRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 16px;
+`;
+
+const SkeletonDonut = styled.div`
+  width: 88px;
+  height: 88px;
+  border-radius: 50%;
+  background: #eee;
+  flex-shrink: 0;
+`;
+
+const SkeletonLines = styled.div`
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+`;
+
+const SkeletonLine = styled.div`
+  height: 14px;
+  border-radius: 6px;
+  background: #eee;
+`;
+
+const SkeletonBars = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+`;
+
+const SkeletonBar = styled.div`
+  height: 30px;
+  border-radius: 8px;
+  background: #eee;
+`;
+
+// 그래프 영역 전용 대체 문구(에러 / 빈 상태). 팝업의 나머지 UI는 그대로 둔다.
+const PatternFallback = styled.p`
+  font-size: 13px;
+  color: #999;
+  text-align: center;
+  padding: 28px 0;
+  margin: 0;
 `;
 
 const ReportLink = styled.button`
