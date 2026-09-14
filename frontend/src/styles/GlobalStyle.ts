@@ -15,6 +15,10 @@ export const GlobalStyle = createGlobalStyle`
     font-weight: 400;
   }
 
+  button, input, textarea, select { 
+    font-family: inherit; 
+  }
+
   a[x-apple-data-detectors],
   a[x-apple-data-detectors]:hover,
   a[x-apple-data-detectors]:focus,
