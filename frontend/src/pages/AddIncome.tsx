@@ -19,9 +19,7 @@ import {
   StepButton,
 } from '../styles/field.styles';
 import { useQueryClient } from '@tanstack/react-query';
-
-// TODO: 꼭 필요한 항목 위주로 임시 구성, 확정 필요
-const INCOME_SOURCES = ['용돈', '아르바이트', '장학금/지원금', '환급/캐시백', '선물/축의금', '기타'];
+import { INCOME_SOURCES } from '../constants/income';
 
 const AMOUNT_STEP = 5000;
 
@@ -103,7 +101,7 @@ export default function AddIncome() {
           </AmountBox>
 
           <FieldGroup>
-            <FieldLabel>결제일시</FieldLabel>
+            <FieldLabel>수입일시</FieldLabel>
             <DateTimePickerField
                 date={date}
                 time={time}
