@@ -3,6 +3,7 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import styled from 'styled-components';
 import BackButton from '../../components/BackButton';
+import ChipSelect from '../../components/ChipSelect';
 import DateTimePickerField from '../../components/DateTimePickerField';
 import BottomSheet from '../../components/BottomSheet';
 import TagQuestions, { TAG_LABEL, CONTEXT_TAG_NAMES, PLAN_TAG_NAMES } from '../../components/TagQuestions';
@@ -15,6 +16,7 @@ import { updateTransaction, deleteTransaction, tagTransactionEmotions, setTransa
 import { ApiError } from '../../api/client';
 import { toDateKey } from '../../utils/date';
 import { CATEGORY_ICONS, CATEGORY_OPTIONS } from '../../utils/category';
+import { INCOME_SOURCES } from '../../constants/income';
 import incomeIcon from '../../assets/images/income_icon.svg';
 import expenseIcon from '../../assets/images/expense_icon.svg';
 import angleRightIcon from '../../assets/images/angle_right.svg';
@@ -235,16 +237,18 @@ export default function TransactionDetail() {
         />
       </DetailAmountRow>
 
-      <StyledFieldGroup>
-        <StyledFieldLabel>결제처</StyledFieldLabel>
-        <MerchantInputWrap>
-          <StyledInput value={merchant} onChange={(e) => setMerchant(e.target.value)} />
-          <EditIcon src={editIcon} alt="" />
-        </MerchantInputWrap>
-      </StyledFieldGroup>
+      {isExpense && (
+        <StyledFieldGroup>
+          <StyledFieldLabel>결제처</StyledFieldLabel>
+          <MerchantInputWrap>
+            <StyledInput value={merchant} onChange={(e) => setMerchant(e.target.value)} />
+            <EditIcon src={editIcon} alt="" />
+          </MerchantInputWrap>
+        </StyledFieldGroup>
+      )}
 
       <StyledFieldGroup>
-        <StyledFieldLabel>결제일시</StyledFieldLabel>
+        <StyledFieldLabel>{isExpense ? '결제일시' : '수입일시'}</StyledFieldLabel>
         <DateFieldWrap>
           <DateTimePickerField
             date={date}
@@ -257,19 +261,28 @@ export default function TransactionDetail() {
         </DateFieldWrap>
       </StyledFieldGroup>
 
-      <StyledFieldGroup>
-        <StyledFieldLabel>카테고리</StyledFieldLabel>
-        <SelectFieldWrap>
-          <StyledSelect value={category} onChange={(e) => setCategory(e.target.value)}>
-            {CATEGORY_OPTIONS.map((option) => (
-              <option key={option} value={option}>
-                {option}
-              </option>
-            ))}
-          </StyledSelect>
-          <ChevronIcon src={angleRightIcon} alt="" width={16} height={16} />
-        </SelectFieldWrap>
-      </StyledFieldGroup>
+      {isExpense && (
+        <StyledFieldGroup>
+          <StyledFieldLabel>카테고리</StyledFieldLabel>
+          <SelectFieldWrap>
+            <StyledSelect value={category} onChange={(e) => setCategory(e.target.value)}>
+              {CATEGORY_OPTIONS.map((option) => (
+                <option key={option} value={option}>
+                  {option}
+                </option>
+              ))}
+            </StyledSelect>
+            <ChevronIcon src={angleRightIcon} alt="" width={16} height={16} />
+          </SelectFieldWrap>
+        </StyledFieldGroup>
+      )}
+
+      {!isExpense && (
+        <StyledFieldGroup>
+          <StyledFieldLabel>출처</StyledFieldLabel>
+          <ChipSelect options={INCOME_SOURCES} value={category} onChange={setCategory} />
+        </StyledFieldGroup>
+      )}
 
       {isExpense && (
         <StyledFieldGroup>
@@ -309,7 +322,14 @@ export default function TransactionDetail() {
 
       <SubmitButton
         type="button"
-        disabled={!isDirty || !isAmountValid || mutation.isPending || tagSaving || emotionsPending}
+        disabled={
+          !isDirty ||
+          !isAmountValid ||
+          (!isExpense && !INCOME_SOURCES.includes(category)) ||
+          mutation.isPending ||
+          tagSaving ||
+          emotionsPending
+        }
         onClick={handleSubmit}
       >
         수정 완료
