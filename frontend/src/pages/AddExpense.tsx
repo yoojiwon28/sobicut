@@ -1,5 +1,5 @@
 import { useMemo, useState, type FormEvent } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import styled from 'styled-components';
 import BackButton from '../components/BackButton';
@@ -27,6 +27,7 @@ import { CATEGORY_OPTIONS, CATEGORY_ICONS } from '../utils/category';
 import { parseCardMessage, createTransaction, tagTransactionEmotions, setTransactionTags } from '../api/transactions';
 import { getEmotions } from '../api/emotions';
 import { ApiError } from '../api/client';
+import { formatDateParam, parseDateParam } from '../utils/date';
 import editIcon from '../assets/images/edit_icon.svg';
 
 // Q1 버튼 전용 카피(질문-답변 프레이밍). 태그 표현과 무관한 UI 문구라 TAG_LABEL과 분리한다.
@@ -37,19 +38,19 @@ const PLAN_OPTION_COPY: Record<string, string> = {
 
 const AMOUNT_STEP = 5000;
 
-const toDateInputValue = (date: Date) => date.toISOString().slice(0, 10);
 const toTimeValue = (date: Date) =>
   `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
 
 export default function AddExpense() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
   const queryClient = useQueryClient();
 
   const [amount, setAmount] = useState('');
   const [merchant, setMerchant] = useState('');
-  const [date, setDate] = useState(toDateInputValue(new Date()));
-  const [time, setTime] = useState(toTimeValue(new Date()));
+  const [date, setDate] = useState(() => formatDateParam(parseDateParam(searchParams.get('date'))));
+  const [time, setTime] = useState(() => toTimeValue(parseDateParam(searchParams.get('date'))));
   const [category, setCategory] = useState('');
   const [planTag, setPlanTag] = useState<string | null>(null);
   const [contextTags, setContextTags] = useState<string[]>([]);

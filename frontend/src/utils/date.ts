@@ -52,3 +52,19 @@ export function getWeekRange(date: Date) {
   const end = new Date(date.getFullYear(), date.getMonth(), date.getDate() + diffToMonday + 6);
   return { start, end };
 }
+
+const DATE_PARAM_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+
+export function formatDateParam(date: Date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
+
+export function parseDateParam(param: string | null) {
+  const now = new Date();
+  if (!param || !DATE_PARAM_PATTERN.test(param)) {
+    return now;
+  }
+
+  const [year, month, day] = param.split('-').map(Number);
+  return new Date(year, month - 1, day, now.getHours(), now.getMinutes());
+}
