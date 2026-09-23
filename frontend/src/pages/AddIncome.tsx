@@ -1,11 +1,12 @@
 import { useState, type FormEvent } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import BackButton from '../components/BackButton';
 import ChipSelect from '../components/ChipSelect';
 import DateTimePickerField from '../components/DateTimePickerField';
 import { AuthTitle, FormColumn, ButtonPrimary, Spinner } from '../styles/auth.styles';
 import { createTransaction } from '../api/transactions';
 import { ApiError } from '../api/client';
+import { formatDateParam, parseDateParam } from '../utils/date';
 import styled from 'styled-components';
 import {
   FieldGroup,
@@ -25,18 +26,18 @@ const INCOME_SOURCES = ['용돈', '아르바이트', '장학금/지원금', '환
 
 const AMOUNT_STEP = 5000;
 
-const toDateInputValue = (date: Date) => date.toISOString().slice(0, 10);
 const toTimeValue = (date: Date) =>
   `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
 
 export default function AddIncome() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
   const queryClient = useQueryClient();
 
   const [amount, setAmount] = useState('');
-  const [date, setDate] = useState(toDateInputValue(new Date()));
-  const [time, setTime] = useState(toTimeValue(new Date()));
+  const [date, setDate] = useState(() => formatDateParam(parseDateParam(searchParams.get('date'))));
+  const [time, setTime] = useState(() => toTimeValue(parseDateParam(searchParams.get('date'))));
   const [source, setSource] = useState('');
   const [memo, setMemo] = useState('');
 

@@ -7,6 +7,7 @@ import Logo2 from '../components/Logo2';
 import { CATEGORY_ICONS } from '../utils/category';
 import { getTransactions } from '../api/transactions';
 import { getDailyReport } from '../api/reports';
+import { formatDateParam } from '../utils/date';
 import incomeIcon from '../assets/images/income_icon.svg';
 import expenseIcon from '../assets/images/expense_icon.svg';
 
@@ -153,11 +154,11 @@ export default function CalendarPage() {
         <ModalOverlay onClick={() => setShowAddModal(false)}>
           <ModalCard onClick={(e) => e.stopPropagation()}>
             <ModalTitle>내역 추가</ModalTitle>
-            <ModalButton type="button" onClick={() => navigate('/income/add')}>
+            <ModalButton type="button" onClick={() => navigate(`/income/add?date=${formatDateParam(selectedDate)}`)}>
               <img src={incomeIcon} alt="" width={22} height={22} />
               수입 추가
             </ModalButton>
-            <ModalButton type="button" onClick={() => navigate('/expenses/add')}>
+            <ModalButton type="button" onClick={() => navigate(`/expenses/add?date=${formatDateParam(selectedDate)}`)}>
               <img src={expenseIcon} alt="" width={22} height={22} />
               지출 추가
             </ModalButton>
