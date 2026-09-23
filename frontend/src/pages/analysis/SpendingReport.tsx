@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import BackButton from '../../components/BackButton';
@@ -18,6 +18,7 @@ import fogImg from '../../assets/images/bpti/fog.png';
 import lazyImg from '../../assets/images/bpti/lazy.png';
 import sageImg from '../../assets/images/bpti/sage.png';
 import visionImg from '../../assets/images/bpti/vision.png';
+import infoIcon from '../../assets/images/info_icon.svg';
 import { useQuery } from '@tanstack/react-query';
 import { getDailyReport } from '../../api/reports';
 
@@ -32,11 +33,34 @@ const BPTI_IMAGES: Record<string, string> = {
   VISION: visionImg,
 };
 
+
 const CHART_H = 190;
 const VALUE_H = 34;
 const LABEL_H = 27;
 const TRACK_H = CHART_H - VALUE_H - LABEL_H;
 const CHART_GAP = 12;
+
+type HelpChunk = { text: string; strong?: boolean };
+
+const BPTI_HELP_TEXT: HelpChunk[] = [
+  { text: 'BPTI는 ' },
+  { text: 'Buying Pattern Type Indicator', strong: true },
+  { text: '의 줄임말로, 최근 소비에서 가장 많이 붙은 태그를 기준으로 분류한 나의 소비 성향이에요. 아래 그래프의 숫자는 ' },
+  { text: '각 태그가 붙은 소비 건수', strong: true },
+  { text: '를 보여줘요.' },
+];
+
+function HelpChunks({ chunks }: { chunks: HelpChunk[] }) {
+  return (
+    <>
+      {chunks.map((chunk, i) => (
+        <span key={i} style={chunk.strong ? { fontWeight: 800, color: '#221B75' } : undefined}>
+          {chunk.text}
+        </span>
+      ))}
+    </>
+  );
+}
 
 
 function splitSentences(text: string): string[] {
@@ -49,6 +73,20 @@ export default function SpendingReport() {
   const navigate = useNavigate();
   const location = useLocation();
   const walletSectionRef = useRef<HTMLDivElement>(null);
+
+  const [showBptiHelp, setShowBptiHelp] = useState(false);
+
+  useEffect(() => {
+    if (!showBptiHelp) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest('[data-help-toggle]')) {
+        setShowBptiHelp(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showBptiHelp]);
 
   const impulseQuery = useImpulseReport();
   const bptiQuery = useBptiReport();
@@ -171,6 +209,19 @@ export default function SpendingReport() {
           <CardError>불러오지 못했어요</CardError>
         ) : (
           <>
+            <HelpIconButton
+              type="button"
+              data-help-toggle
+              aria-label="BPTI 도움말"
+              onClick={() => setShowBptiHelp((v) => !v)}
+            >
+              <img src={infoIcon} alt="" width={14} height={14} />
+            </HelpIconButton>
+            {showBptiHelp && (
+              <HelpBubble data-help-toggle>
+                <HelpChunks chunks={BPTI_HELP_TEXT} />
+              </HelpBubble>
+            )}
             <BptiTitle>나의 소비성격유형 BPTI는</BptiTitle>
             <BptiType>[ {bpti?.type ?? '—'} - {bpti?.label ?? '—'} ]</BptiType>
             <BptiDefinition>{bpti?.definition ?? '—'}</BptiDefinition>
@@ -333,6 +384,7 @@ const Card = styled.div`
   border-radius: 16px;
   padding: 20px 18px;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
+  position: relative;
 
   & + & {
     margin-top: 14px;
@@ -350,6 +402,39 @@ const CardTop = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
+`;
+
+const HelpIconButton = styled.button`
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 18px;
+  height: 18px;
+  border: none;
+  background: none;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  opacity: 0.5;
+`;
+
+const HelpBubble = styled.div`
+  position: absolute;
+  top: 32px;
+  right: 10px;
+  left: 10px;
+  z-index: 10;
+  background: #ffffff;
+  border-left: 2px solid #6a5ce6;
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 10.5px;
+  line-height: 1.5;
+  color: #444;
+  text-align: left;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.12);
 `;
 
 const DiffBadge = styled.div`
@@ -428,7 +513,7 @@ const ReasonButton = styled.button`
 
 const BptiTitle = styled.div`
   font-size: 15px;
-  font-weight: 800;
+  font-weight: 500;
   text-align: left;
   margin-bottom: 8px;
 `;

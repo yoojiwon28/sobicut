@@ -1,4 +1,9 @@
 import styled from 'styled-components';
+import fireImg from '../assets/images/bpti/fire.png';
+import fogImg from '../assets/images/bpti/fog.png';
+import lazyImg from '../assets/images/bpti/lazy.png';
+import sageImg from '../assets/images/bpti/sage.png';
+import visionImg from '../assets/images/bpti/vision.png';
 
 type RadarAxis = {
   label: string;
@@ -25,12 +30,45 @@ const BPTI_LABEL_DISPLAY: Record<string, string> = {
   장기적가치: '장기적 가치',
 };
 
-// 라벨이 SVG 경계에서 잘리지 않도록 좌우/상하 여백을 포함한 좌표계를 사용한다.
-// (좌우 각 120px, 상단/하단 각 40px 수준의 라벨 영역을 확보)
+const BPTI_SIGN: Record<string, '+' | '-'> = {
+  스트레스: '-',
+  즉흥성: '-',
+  장기적가치: '+',
+  충분한숙고: '+',
+  비교회피: '-',
+};
+
+const SIGN_COLORS: Record<'+' | '-', { bg: string; color: string }> = {
+  '-': { bg: '#ffe8e8', color: '#ff4040' },
+  '+': { bg: '#e6f7ec', color: '#22b356' },
+};
+
+const BPTI_TAG_IMAGE: Record<string, string> = {
+  스트레스: fireImg,
+  즉흥성: fogImg,
+  비교회피: lazyImg,
+  충분한숙고: sageImg,
+  장기적가치: visionImg,
+};
+
+
+function estimateLabelWidth(label: string) {
+  let width = 0;
+  for (const ch of label) {
+    width += ch === ' ' ? 5 : 11;
+  }
+  return width;
+}
+
+const SIGN_CIRCLE_R = 7;
+const SIGN_GAP = 6;
+const TAG_IMAGE_SIZE = 52;
+const TAG_IMAGE_GAP = 6;
+
 const VIEW_W = 480;
-const VIEW_H = 400;
+const VIEW_H = 440;
 const CENTER_X = VIEW_W / 2;
-const CENTER_Y = 210;
+const CENTER_Y = 230;
 const OUTER_RADIUS = 125;
 const LABEL_RADIUS = OUTER_RADIUS + 20;
 
@@ -102,18 +140,72 @@ export default function RadarChart({ axes, max, size = 300, color = '#6A5CE6' }:
           dy = 12;
         }
 
+        const displayLabel = BPTI_LABEL_DISPLAY[axis.label] ?? axis.label;
+        const sign = BPTI_SIGN[axis.label];
+        const tagImage = BPTI_TAG_IMAGE[axis.label];
+        const textX = x + dx;
+        const textY = y + dy;
+        const labelWidth = estimateLabelWidth(displayLabel);
+
+        let textLeftEdge = textX;
+        if (textAnchor === 'end') textLeftEdge = textX - labelWidth;
+        else if (textAnchor === 'middle') textLeftEdge = textX - labelWidth / 2;
+
+        const signCx = textLeftEdge - SIGN_GAP - SIGN_CIRCLE_R;
+        const signCy = baseline === 'hanging' ? textY + 5 : textY - 4;
+
+        const labelCenterX = textLeftEdge + labelWidth / 2;
+        const textTop = baseline === 'hanging' ? textY : textY - 9;
+        const tagImageY = textTop - TAG_IMAGE_GAP - TAG_IMAGE_SIZE;
+        const tagImageX = labelCenterX - TAG_IMAGE_SIZE / 2;
+
         return (
-          <text
-            key={axis.label}
-            x={x + dx}
-            y={y + dy}
-            fontSize={12}
-            fill="#888"
-            textAnchor={textAnchor}
-            dominantBaseline={baseline}
-          >
-            {BPTI_LABEL_DISPLAY[axis.label] ?? axis.label}
-          </text>
+          <g key={axis.label}>
+            {tagImage && (
+              <image
+                href={tagImage}
+                x={tagImageX}
+                y={tagImageY}
+                width={TAG_IMAGE_SIZE}
+                height={TAG_IMAGE_SIZE}
+              />
+            )}
+            {sign && (
+              <>
+                <circle cx={signCx} cy={signCy} r={SIGN_CIRCLE_R} fill={SIGN_COLORS[sign].bg} />
+                <line
+                  x1={signCx - 3}
+                  y1={signCy}
+                  x2={signCx + 3}
+                  y2={signCy}
+                  stroke={SIGN_COLORS[sign].color}
+                  strokeWidth={1.5}
+                  strokeLinecap="round"
+                />
+                {sign === '+' && (
+                  <line
+                    x1={signCx}
+                    y1={signCy - 3}
+                    x2={signCx}
+                    y2={signCy + 3}
+                    stroke={SIGN_COLORS[sign].color}
+                    strokeWidth={1.5}
+                    strokeLinecap="round"
+                  />
+                )}
+              </>
+            )}
+            <text
+              x={textX}
+              y={textY}
+              fontSize={12}
+              fill="#888"
+              textAnchor={textAnchor}
+              dominantBaseline={baseline}
+            >
+              {displayLabel}
+            </text>
+          </g>
         );
       })}
     </Svg>
