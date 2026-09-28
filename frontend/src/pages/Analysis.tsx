@@ -106,6 +106,8 @@ function displayScore(query: { isPending: boolean; isError: boolean }, value: st
   return value;
 }
 
+const round1 = (n: number) => Math.round(n * 10) / 10;
+
 function hexToRgb(hex: string) {
   const num = parseInt(hex.replace('#', ''), 16);
   return { r: (num >> 16) & 255, g: (num >> 8) & 255, b: num & 255 };
@@ -207,7 +209,7 @@ export default function Analysis() {
 
   const top3 = categoryBreakdown.slice(0, 3);
   const rest = categoryBreakdown.slice(3);
-  const restPercent = rest.reduce((sum, r) => sum + r.percent, 0);
+  const restPercent = round1(rest.reduce((sum, r) => sum + r.percent, 0));
 
   const donutGradient = useMemo(() => {
     if (categoryBreakdown.length === 0) return `#ececec 0% 100%`;
