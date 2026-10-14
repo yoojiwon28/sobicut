@@ -118,14 +118,20 @@ export type HeatmapReport = {
 };
 
 // GET /reports/prescription (week_start optional, YYYY-MM-DD 월요일 — 생략 시 서버가 지난주 월요일 사용)
-// 주의: prescription 은 배치 미수행 / 해당 주 거래 없음이면 null (에러 아님).
+// 주의: prescription 은 prescription_status 가 'ready' 일 때만 배열, 그 외엔 null (에러 아님).
 //       negative_factors / positive_factors 는 빈 배열일 수 있고, prescription 과 독립적이다.
+//       has_enough_data=false(주간 지출 5건 미만)면 요인/처방 카드 전체를 안내 문구로 대체한다.
+export type PrescriptionStatus = 'ready' | 'failed' | 'pending';
+
 export type PrescriptionReport = {
   period_start: string; // 'YYYY-MM-DD'
   period_end: string; // 'YYYY-MM-DD'
+  transaction_count: number;
+  has_enough_data: boolean;
   negative_factors: string[];
   positive_factors: string[];
   prescription: string[] | null;
+  prescription_status: PrescriptionStatus;
   generated_at: string | null;
 };
 

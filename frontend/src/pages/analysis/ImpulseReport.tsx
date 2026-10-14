@@ -5,6 +5,8 @@ import { PageWrap } from '../../styles/auth.styles';
 import { useImpulseReport, usePrescriptionReport } from '../../hooks/useReports';
 import { getImpulseGaugeColor } from '../../utils/impulse';
 
+const INSUFFICIENT_DATA_TEXT = '아직 분석할 데이터가 부족해요.';
+
 // 'YYYY-MM-DD' → 'M/D'
 function formatMonthDay(iso: string): string {
   const [, month, day] = iso.split('-');
@@ -23,8 +25,10 @@ export default function ImpulseReport() {
 
   const negativeFactors = prescriptionReport?.negative_factors ?? [];
   const positiveFactors = prescriptionReport?.positive_factors ?? [];
-  const hasFactors = negativeFactors.length > 0 || positiveFactors.length > 0;
   const prescription = prescriptionReport?.prescription ?? [];
+  const prescriptionStatus = prescriptionReport?.prescription_status;
+  // 주간 지출 5건 미만 → 요인/처방 카드 전체를 안내 문구로 대체
+  const isInsufficient = prescriptionReport?.has_enough_data === false;
 
   return (
     <PageWrap>
@@ -53,64 +57,72 @@ export default function ImpulseReport() {
         </>
       )}
 
-      <Card>
-        <SectionTitle>점수에 영향을 준 정보예요</SectionTitle>
-        {prescriptionReport && (
-          <PeriodText>
-            {formatMonthDay(prescriptionReport.period_start)} ~ {formatMonthDay(prescriptionReport.period_end)} 소비 기준
-          </PeriodText>
-        )}
+      {isInsufficient ? (
+        <Card>
+          <EmptyText>{INSUFFICIENT_DATA_TEXT}</EmptyText>
+        </Card>
+      ) : (
+        <>
+          <Card>
+            <SectionTitle>점수에 영향을 준 정보예요</SectionTitle>
+            {prescriptionReport && (
+              <PeriodText>
+                {formatMonthDay(prescriptionReport.period_start)} ~ {formatMonthDay(prescriptionReport.period_end)} 소비 기준
+              </PeriodText>
+            )}
 
-        {prescriptionQuery.isError ? (
-          <LoadError>불러오지 못했어요</LoadError>
-        ) : !hasFactors ? (
-          <EmptyText>아직 분석할 소비 기록이 없어요</EmptyText>
-        ) : (
-          <FactorGroups>
-            {negativeFactors.length > 0 && (
-              <>
+            {prescriptionQuery.isError ? (
+              <LoadError>불러오지 못했어요</LoadError>
+            ) : prescriptionReport ? (
+              <FactorGroups>
                 <FactorGroupTitle>점수를 높인 요인 (부정적 습관)</FactorGroupTitle>
-                <FactorList>
-                  {negativeFactors.map((factor) => (
-                    <FactorRow key={factor}>{factor}</FactorRow>
-                  ))}
-                </FactorList>
-              </>
-            )}
+                {negativeFactors.length > 0 ? (
+                  <FactorList>
+                    {negativeFactors.map((factor) => (
+                      <FactorRow key={factor}>{factor}</FactorRow>
+                    ))}
+                  </FactorList>
+                ) : (
+                  <AreaEmptyText>{INSUFFICIENT_DATA_TEXT}</AreaEmptyText>
+                )}
 
-            {positiveFactors.length > 0 && (
-              <>
                 <FactorGroupTitle>점수를 낮춘 요인 (긍정적 습관)</FactorGroupTitle>
-                <FactorList>
-                  {positiveFactors.map((factor) => (
-                    <FactorRow key={factor} $positive>
-                      {factor}
-                    </FactorRow>
-                  ))}
-                </FactorList>
-              </>
-            )}
-          </FactorGroups>
-        )}
-      </Card>
+                {positiveFactors.length > 0 ? (
+                  <FactorList>
+                    {positiveFactors.map((factor) => (
+                      <FactorRow key={factor} $positive>
+                        {factor}
+                      </FactorRow>
+                    ))}
+                  </FactorList>
+                ) : (
+                  <AreaEmptyText>{INSUFFICIENT_DATA_TEXT}</AreaEmptyText>
+                )}
+              </FactorGroups>
+            ) : null}
+          </Card>
 
-      <Card>
-        <PrescriptionSectionTitle>이번 주 맞춤 처방전</PrescriptionSectionTitle>
-        {prescriptionQuery.isError ? (
-          <LoadError>불러오지 못했어요</LoadError>
-        ) : prescription.length === 0 ? (
-          <EmptyText>이번 주 처방전은 아직 준비 중이에요</EmptyText>
-        ) : (
-          <PrescriptionList>
-            {prescription.map((item, i) => (
-              <PrescriptionRow key={item}>
-                <PrescriptionBadge>{i + 1}</PrescriptionBadge>
-                <PrescriptionText>{item}</PrescriptionText>
-              </PrescriptionRow>
-            ))}
-          </PrescriptionList>
-        )}
-      </Card>
+          <Card>
+            <PrescriptionSectionTitle>이번 주 맞춤 처방전</PrescriptionSectionTitle>
+            {prescriptionQuery.isError ? (
+              <LoadError>불러오지 못했어요</LoadError>
+            ) : prescriptionStatus === 'failed' ? (
+              <EmptyText>준비하지 못했어요</EmptyText>
+            ) : prescriptionStatus === 'ready' && prescription.length > 0 ? (
+              <PrescriptionList>
+                {prescription.map((item, i) => (
+                  <PrescriptionRow key={item}>
+                    <PrescriptionBadge>{i + 1}</PrescriptionBadge>
+                    <PrescriptionText>{item}</PrescriptionText>
+                  </PrescriptionRow>
+                ))}
+              </PrescriptionList>
+            ) : prescriptionReport ? (
+              <EmptyText>이번 주 처방전은 아직 준비 중이에요</EmptyText>
+            ) : null}
+          </Card>
+        </>
+      )}
     </PageWrap>
   );
 }
@@ -145,6 +157,13 @@ const EmptyText = styled.div`
   color: #999;
   text-align: center;
   padding: 24px 0;
+`;
+
+// 요인 영역(부정/긍정) 하나만 비었을 때의 안내 — FactorList 자리를 대신한다
+const AreaEmptyText = styled.div`
+  font-size: 14px;
+  color: #999;
+  margin-bottom: 20px;
 `;
 
 const PeriodText = styled.div`
